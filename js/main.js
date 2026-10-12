@@ -1,6 +1,6 @@
 // Accordion functionality
 function toggleMenu(menuId, button) {
-    const menu = document.getElementById(menuId);
+    const menu = button.nextElementSibling; // not by id: several folders share the same id
     const icon = button.querySelector('.menu-icon');
     const folder = button.querySelector('.folder-icon');
     
