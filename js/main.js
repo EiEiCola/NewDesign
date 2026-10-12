@@ -16,7 +16,7 @@ function toggleMenu(menuId, button) {
         }
     } else {
         menu.classList.add('open');
-        menu.style.maxHeight = '500px'; 
+        menu.style.maxHeight = '2000px'; 
         menu.style.opacity = '1';
         icon.classList.add('rotate');
         
