@@ -86,13 +86,118 @@ const CMS = (function () {
         if (typeof initCarousel === 'function') initCarousel();
     }
 
+    let loggedIn = false;
+
+    function showUser(link, user) {
+        loggedIn = true;
+        link.href = user.canPost ? 'admin/index.html' : '#';
+        link.innerHTML = `<i class="fa-solid ${user.canPost ? 'fa-pen-to-square' : 'fa-user'} text-[10px]"></i><span>${esc(user.firstName)}${user.canPost ? ' · CMS' : ''}</span>`;
+    }
+
+    /** Floating login form over the current page (admin/login.html stays as the no-JS fallback). */
+    function openLoginModal(link) {
+        const wrap = document.createElement('div');
+        wrap.className = 'fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4';
+        wrap.innerHTML = `
+            <form class="w-full max-w-sm bg-white rounded-lg shadow-xl p-6 relative" novalidate>
+                <button type="button" data-close class="absolute top-3 right-3 w-7 h-7 text-slate-400 hover:text-slate-700" aria-label="ปิด"><i class="fa-solid fa-xmark"></i></button>
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-lock text-primary"></i>
+                    <h2 class="text-lg font-bold text-slate-800">เข้าสู่ระบบ</h2>
+                </div>
+                <p class="text-[12px] text-slate-400 mb-5">Sirivatana Intranet</p>
+
+                <div data-error class="hidden mb-4 text-[12px] text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2" role="alert"></div>
+
+                <label class="block text-[12px] text-slate-500 mb-1" for="lm-username">ชื่อผู้ใช้</label>
+                <input id="lm-username" name="username" autocomplete="username" required
+                    class="w-full border border-slate-300 rounded px-3 py-2 text-[13px] mb-3 focus:outline-none focus:border-primary focus:ring-2 focus:ring-purple-100">
+
+                <label class="block text-[12px] text-slate-500 mb-1" for="lm-password">รหัสผ่าน</label>
+                <div class="relative mb-5">
+                    <input id="lm-password" name="password" type="password" autocomplete="current-password" required
+                        class="w-full border border-slate-300 rounded px-3 py-2 pr-9 text-[13px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-purple-100">
+                    <button type="button" data-toggle class="absolute right-0 top-0 bottom-0 px-3 text-slate-400 hover:text-primary" aria-label="แสดงรหัสผ่าน">
+                        <i class="fa-regular fa-eye text-xs"></i>
+                    </button>
+                </div>
+
+                <button type="submit" class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-purple-800 text-white rounded py-2 text-[13px] font-semibold disabled:opacity-60">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+                </button>
+            </form>`;
+
+        const form = wrap.querySelector('form');
+        const errorBox = wrap.querySelector('[data-error]');
+        const password = form.password;
+        const submit = form.querySelector('[type="submit"]');
+
+        const onKey = (e) => { if (e.key === 'Escape') close(); };
+        function close() {
+            wrap.remove();
+            document.removeEventListener('keydown', onKey);
+        }
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.classList.remove('hidden');
+        }
+
+        wrap.addEventListener('click', (e) => {
+            if (e.target === wrap || e.target.closest('[data-close]')) close();
+        });
+        document.addEventListener('keydown', onKey);
+
+        wrap.querySelector('[data-toggle]').addEventListener('click', (e) => {
+            const show = password.type === 'password';
+            password.type = show ? 'text' : 'password';
+            e.currentTarget.querySelector('i').className = `fa-regular ${show ? 'fa-eye-slash' : 'fa-eye'} text-xs`;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.classList.add('hidden');
+            const username = form.username.value.trim();
+            if (!username || !password.value) return showError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+
+            const label = submit.innerHTML;
+            submit.disabled = true;
+            submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password: password.value }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || `เกิดข้อผิดพลาด (${res.status})`);
+                showUser(link, data.user);
+                close();
+            } catch (err) {
+                showError(err.message === 'Failed to fetch' ? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้' : err.message);
+                password.value = '';
+                password.focus();
+            } finally {
+                submit.disabled = false;
+                submit.innerHTML = label;
+            }
+        });
+
+        document.body.appendChild(wrap);
+        form.username.focus();
+    }
+
     async function loadLoginState() {
         const link = document.getElementById('login-link');
         if (!link) return;
+        link.addEventListener('click', (e) => {
+            if (loggedIn) return;
+            e.preventDefault();
+            openLoginModal(link);
+        });
         try {
             const { user } = await getJson('/api/auth/me');
-            link.href = user.canPost ? 'admin/index.html' : '#';
-            link.innerHTML = `<i class="fa-solid ${user.canPost ? 'fa-pen-to-square' : 'fa-user'} text-[10px]"></i><span>${esc(user.firstName)}${user.canPost ? ' · CMS' : ''}</span>`;
+            showUser(link, user);
         } catch {
             /* not logged in: keep the Login button */
         }
