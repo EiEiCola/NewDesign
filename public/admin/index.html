@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ภาพรวม | Intranet CMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-background font-sans text-slate-700 antialiased" data-page="dashboard">
+    <div class="md:flex min-h-screen">
+        <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-2">
+            <span class="font-bold text-[14px]">Intranet CMS</span>
+            <button id="nav-toggle" type="button" class="w-8 h-8" aria-label="เมนู"><i class="fa-solid fa-bars"></i></button>
+        </div>
+        <aside id="admin-nav" class="hidden md:flex flex-col w-full md:w-60 bg-slate-900 py-4 px-2 md:sticky md:top-0 md:h-screen flex-shrink-0"></aside>
+
+        <main id="page" class="flex-1 min-w-0 p-4 md:p-6" hidden>
+            <h1 class="text-xl font-bold text-slate-800 mb-1">ภาพรวม</h1>
+            <p id="welcome" class="text-[13px] text-slate-500 mb-5"></p>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6" id="stats"></div>
+
+            <div class="bg-white border border-slate-200 rounded-lg">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                    <h2 class="font-semibold text-slate-800 text-[14px]">โพสต์ล่าสุด</h2>
+                    <a href="content-edit.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> สร้างโพสต์</a>
+                </div>
+                <ul id="recent" class="divide-y divide-slate-100"></ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/admin/api.js"></script>
+    <script src="../js/admin/layout.js"></script>
+    <script>
+        adminReady.then(async (user) => {
+            document.getElementById('welcome').textContent =
+                `สวัสดี ${user.firstName} ${user.lastName} (${ROLE_LABEL[user.role]})`;
+
+            const statuses = [
+                { key: '', label: 'โพสต์ทั้งหมด', icon: 'fa-newspaper', color: 'text-primary' },
+                { key: 'published', label: 'เผยแพร่', icon: 'fa-circle-check', color: 'text-emerald-600' },
+                { key: 'draft', label: 'ร่าง', icon: 'fa-file-pen', color: 'text-slate-500' },
+                { key: 'hidden', label: 'ซ่อน', icon: 'fa-eye-slash', color: 'text-amber-600' },
+            ];
+            try {
+                const counts = await Promise.all(
+                    statuses.map((s) => API.get(`/api/contents?pageSize=1${s.key ? `&status=${s.key}` : ''}`))
+                );
+                document.getElementById('stats').innerHTML = statuses.map((s, i) => `
+                    <a href="contents.html${s.key ? `?status=${s.key}` : ''}" class="bg-white border border-slate-200 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                        <div class="flex items-center justify-between text-[12px] text-slate-500">${s.label}<i class="fa-solid ${s.icon} ${s.color}"></i></div>
+                        <div class="text-2xl font-bold text-slate-800 mt-1">${counts[i].total}</div>
+                    </a>`).join('');
+
+                const recent = await API.get('/api/contents?pageSize=8');
+                document.getElementById('recent').innerHTML = recent.items.length
+                    ? recent.items.map((c) => `
+                        <li><a href="content-edit.html?id=${c.c_id}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
+                            <span class="text-[10px] px-2 py-0.5 rounded font-semibold ${STATUS_BADGE[c.status]}">${STATUS_LABEL[c.status]}</span>
+                            <span class="flex-1 min-w-0 truncate text-[13px] text-slate-700">${esc(c.title)}</span>
+                            <span class="text-[11px] text-slate-400 hidden sm:block">${esc(c.main_name)} › ${esc(c.sub_name)}</span>
+                            <span class="text-[11px] text-slate-400">${fmtDate(c.update_at || c.create_at)}</span>
+                        </a></li>`).join('')
+                    : '<li class="px-4 py-8 text-center text-[13px] text-slate-400">ยังไม่มีโพสต์</li>';
+            } catch (err) {
+                toast(err.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
