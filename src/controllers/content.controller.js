@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const audit = require('../services/audit.service');
 const files = require('../services/file.service');
-const { ACTION, ROLE, CONTENT_STATUS, MEDIA_KIND } = require('../config/constants');
+const { ACTION, ROLE, CONTENT_STATUS, MEDIA_KIND, SIDE } = require('../config/constants');
 const { sanitizeBody } = require('../utils/sanitize');
 const { badRequest, notFound, forbidden } = require('../utils/http-error');
 const v = require('../utils/validate');
@@ -93,8 +93,14 @@ async function readBody(body) {
     if (d.publishAt && d.expireAt && d.expireAt <= d.publishAt) {
         throw badRequest('วันหมดอายุต้องอยู่หลังวันเริ่มเผยแพร่');
     }
-    const sub = await db.query('SELECT sc_id FROM dbo.Sub_category WHERE sc_id = @scId', { scId: d.scId });
+    const sub = await db.query(
+        `SELECT s.sc_id, CASE WHEN m.side = ${SIDE.RIGHT} THEN s.link_url END AS link_url
+         FROM dbo.Sub_category s JOIN dbo.Main_category m ON m.mc_id = s.mc_id
+         WHERE s.sc_id = @scId`,
+        { scId: d.scId }
+    );
     if (!sub.recordset[0]) throw badRequest('ไม่พบหมวดหมู่รองที่เลือก');
+    if (sub.recordset[0].link_url) throw badRequest('หมวดหมู่นี้เป็นลิงก์ไปเว็บอื่น ไม่สามารถโพสต์ได้');
     return d;
 }
 

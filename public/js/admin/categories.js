@@ -27,31 +27,39 @@ adminReady.then(() => {
         }).join('');
     }
 
+    const RIGHT = 3;
+    const linkLine = (url) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-blue-600 hover:underline truncate block">${esc(url)}</a>`;
+
     function mainCard(m) {
+        const isLink = m.side === RIGHT && m.link_url;
         return `
             <div class="bg-white border border-slate-200 rounded-lg ${m.is_active ? '' : 'opacity-60'}">
-                <div class="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100">
-                    <i class="fa-solid fa-folder text-yellow-500"></i>
+                <div class="flex items-center gap-2 px-4 py-2.5 ${isLink ? '' : 'border-b border-slate-100'}">
+                    <i class="fa-solid ${isLink ? 'fa-arrow-up-right-from-square text-blue-500' : 'fa-folder text-yellow-500'}"></i>
                     <span class="font-semibold text-slate-800 text-[14px] flex-1 min-w-0 truncate">${esc(m.name)}</span>
                     <span class="text-[11px] text-slate-400">ลำดับ ${m.sort_order}</span>
                     ${activeBadge(m.is_active)}
                     <button type="button" class="btn btn-ghost !px-2" title="แก้ไข" data-edit-main="${m.mc_id}"><i class="fa-solid fa-pen"></i></button>
                     <button type="button" class="btn btn-danger !px-2" title="ลบ" data-del-main="${m.mc_id}"><i class="fa-solid fa-trash"></i></button>
                 </div>
+                ${isLink ? `<div class="pl-10 pr-4 pb-2.5 -mt-1">${linkLine(m.link_url)}</div>` : `
                 <ul class="divide-y divide-slate-50">
-                    ${m.subs.map((s) => `
+                    ${m.subs.map((s) => {
+                        const subLink = m.side === RIGHT && s.link_url;
+                        return `
                         <li class="flex items-center gap-2 pl-10 pr-4 py-1.5 text-[13px] ${s.is_active ? '' : 'opacity-50'}">
-                            <i class="fa-regular fa-file-lines text-slate-400 text-xs"></i>
-                            <span class="flex-1 min-w-0 truncate">${esc(s.name)}</span>
-                            <span class="text-[11px] text-slate-400">${s.content_count} โพสต์ · ลำดับ ${s.sort_order}</span>
+                            <i class="${subLink ? 'fa-solid fa-link text-blue-400 text-[10px]' : 'fa-regular fa-file-lines text-slate-400 text-xs'}"></i>
+                            <span class="flex-1 min-w-0"><span class="truncate block">${esc(s.name)}</span>${subLink ? linkLine(s.link_url) : ''}</span>
+                            <span class="text-[11px] text-slate-400">${subLink ? 'ลิงก์' : `${s.content_count} โพสต์`} · ลำดับ ${s.sort_order}</span>
                             ${activeBadge(s.is_active)}
                             <button type="button" class="text-slate-400 hover:text-primary w-6" title="แก้ไข" data-edit-sub="${s.sc_id}"><i class="fa-solid fa-pen text-[11px]"></i></button>
                             <button type="button" class="text-slate-400 hover:text-red-600 w-6" title="ลบ" data-del-sub="${s.sc_id}"><i class="fa-solid fa-trash text-[11px]"></i></button>
-                        </li>`).join('')}
+                        </li>`;
+                    }).join('')}
                     <li class="pl-10 pr-4 py-2">
                         <button type="button" class="text-[12px] text-primary hover:underline" data-add-sub="${m.mc_id}"><i class="fa-solid fa-plus text-[10px]"></i> เพิ่มหมวดหมู่รอง</button>
                     </li>
-                </ul>
+                </ul>`}
             </div>`;
     }
 
@@ -63,9 +71,29 @@ adminReady.then(() => {
         return null;
     }
 
+    /** "Normal / link to another website" chooser; only shown for right-side categories. */
+    function linkChooserHtml(url, normalLabel) {
+        return `
+            <div data-link-box class="border-t border-slate-100 pt-3">
+                <label class="admin-label">รูปแบบ <span class="text-slate-400">(ตำแหน่งขวาเท่านั้น)</span></label>
+                <div class="flex flex-wrap gap-4 text-[13px] mb-2">
+                    <label class="flex items-center gap-1.5"><input type="radio" name="kind" value="normal" ${url ? '' : 'checked'}> ${normalLabel}</label>
+                    <label class="flex items-center gap-1.5"><input type="radio" name="kind" value="link" ${url ? 'checked' : ''}> ลิงก์ไปเว็บอื่น</label>
+                </div>
+                <input name="link_url" type="url" class="admin-input" maxlength="500" placeholder="https://..." value="${esc(url || '')}">
+            </div>`;
+    }
+
+    /** Returns the link to save (null when "normal" is chosen or the box is hidden). */
+    function readLinkChooser(form) {
+        const box = form.querySelector('[data-link-box]');
+        if (!box || box.hidden || form.kind.value !== 'link') return null;
+        return form.link_url.value.trim() || null;
+    }
+
     function mainModal(m) {
         const isNew = !m;
-        m = m || { name: '', side: 2, sort_order: nextOrder(categories), is_active: true };
+        m = m || { name: '', side: 2, sort_order: nextOrder(categories), is_active: true, link_url: null };
         const { el, close } = openModal(isNew ? 'เพิ่มหมวดหมู่' : 'แก้ไขหมวดหมู่หลัก', `
             <form class="space-y-3" novalidate>
                 <div><label class="admin-label">ชื่อหมวดหมู่หลัก *</label><input name="name" class="admin-input" maxlength="200" value="${esc(m.name)}"></div>
@@ -76,8 +104,9 @@ adminReady.then(() => {
                     <div><label class="admin-label">ลำดับ</label><input name="sort_order" type="number" class="admin-input" value="${m.sort_order}"></div>
                 </div>
                 <label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_active" ${m.is_active ? 'checked' : ''}> เปิดใช้งาน</label>
+                ${linkChooserHtml(m.link_url, 'มีหมวดหมู่รอง')}
                 ${isNew ? `
-                <div class="border-t border-slate-100 pt-3">
+                <div data-subs-box class="border-t border-slate-100 pt-3">
                     <label class="admin-label">หมวดหมู่รอง <span class="text-slate-400">(ไม่บังคับ · เรียงลำดับตามที่กรอก)</span></label>
                     <div data-subs class="space-y-2"></div>
                     <button type="button" data-add-row class="text-[12px] text-primary hover:underline mt-2"><i class="fa-solid fa-plus text-[10px]"></i> เพิ่มช่องหมวดหมู่รอง</button>
@@ -96,10 +125,25 @@ adminReady.then(() => {
             row.innerHTML = `
                 <i class="fa-regular fa-file-lines text-slate-400 text-xs"></i>
                 <input data-sub-name class="admin-input" maxlength="200" placeholder="ชื่อหมวดหมู่รอง">
+                <input data-sub-link type="url" class="admin-input" maxlength="500" placeholder="ลิงก์ (ถ้ามี) https://..." ${Number(form.side.value) === RIGHT ? '' : 'hidden'}>
                 <button type="button" data-remove-row class="text-slate-400 hover:text-red-600 w-6" title="เอาออก"><i class="fa-solid fa-xmark"></i></button>`;
             subsEl.appendChild(row);
             return row.querySelector('input');
         }
+
+        // Link options exist only on the right side; a main category that is a link has no sub categories
+        const linkBox = el.querySelector('[data-link-box]');
+        const subsBox = el.querySelector('[data-subs-box]');
+        function syncKind() {
+            const right = Number(form.side.value) === RIGHT;
+            linkBox.hidden = !right;
+            const isLink = right && form.kind.value === 'link';
+            form.link_url.hidden = !isLink;
+            if (subsBox) subsBox.hidden = isLink;
+            el.querySelectorAll('[data-sub-link]').forEach((i) => { i.hidden = !right; });
+        }
+        form.side.addEventListener('change', syncKind);
+        form.addEventListener('change', (e) => { if (e.target.name === 'kind') syncKind(); });
 
         if (subsEl) {
             addSubRow();
@@ -112,12 +156,13 @@ adminReady.then(() => {
             });
             // Enter in a sub-category box adds the next box instead of submitting
             subsEl.addEventListener('keydown', (e) => {
-                if (e.key !== 'Enter' || !e.target.matches('[data-sub-name]')) return;
+                if (e.key !== 'Enter' || !e.target.matches('[data-sub-name], [data-sub-link]')) return;
                 e.preventDefault();
                 const next = e.target.parentElement.nextElementSibling;
-                (next ? next.querySelector('input') : addSubRow()).focus();
+                (next ? next.querySelector('[data-sub-name]') : addSubRow()).focus();
             });
         }
+        syncKind();
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -126,9 +171,16 @@ adminReady.then(() => {
                 side: Number(form.side.value),
                 sort_order: Number(form.sort_order.value) || 0,
                 is_active: form.is_active.checked,
+                link_url: readLinkChooser(form),
             };
-            if (subsEl) {
-                data.subs = [...subsEl.querySelectorAll('[data-sub-name]')].map((i) => i.value.trim()).filter(Boolean);
+            if (!linkBox.hidden && form.kind.value === 'link' && !data.link_url) return toast('กรุณากรอกลิงก์', 'error');
+            if (subsEl && !data.link_url) {
+                data.subs = [...subsEl.children]
+                    .map((row) => ({
+                        name: row.querySelector('[data-sub-name]').value.trim(),
+                        link_url: data.side === RIGHT ? row.querySelector('[data-sub-link]').value.trim() || null : null,
+                    }))
+                    .filter((x) => x.name);
             }
             save(form, close, () => (isNew ? API.post('/api/categories/main', data) : API.put(`/api/categories/main/${m.mc_id}`, data)));
         });
@@ -137,7 +189,7 @@ adminReady.then(() => {
     function subModal(s, mcId) {
         const isNew = !s;
         const parent = categories.find((m) => m.mc_id === (s ? s.mc_id : mcId));
-        s = s || { name: '', mc_id: mcId, sort_order: nextOrder(parent ? parent.subs : []), is_active: true };
+        s = s || { name: '', mc_id: mcId, sort_order: nextOrder(parent ? parent.subs : []), is_active: true, link_url: null };
         const { el, close } = openModal(isNew ? 'เพิ่มหมวดหมู่รอง' : 'แก้ไขหมวดหมู่รอง', `
             <form class="space-y-3" novalidate>
                 <div><label class="admin-label">อยู่ในหมวดหมู่หลัก</label>
@@ -146,12 +198,22 @@ adminReady.then(() => {
                 <div><label class="admin-label">ชื่อหมวดหมู่รอง *</label><input name="name" class="admin-input" maxlength="200" value="${esc(s.name)}"></div>
                 <div><label class="admin-label">ลำดับ</label><input name="sort_order" type="number" class="admin-input" value="${s.sort_order}"></div>
                 <label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_active" ${s.is_active ? 'checked' : ''}> เปิดใช้งาน</label>
+                ${linkChooserHtml(s.link_url, 'รายการโพสต์ (ปกติ)')}
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
                     <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> บันทึก</button>
                 </div>
             </form>`);
         const form = el.querySelector('form');
+        const linkBox = el.querySelector('[data-link-box]');
+        function syncKind() {
+            const main = categories.find((m) => m.mc_id === Number(form.mc_id.value));
+            linkBox.hidden = !main || main.side !== RIGHT;
+            form.link_url.hidden = form.kind.value !== 'link';
+        }
+        form.mc_id.addEventListener('change', syncKind);
+        form.addEventListener('change', (e) => { if (e.target.name === 'kind') syncKind(); });
+        syncKind();
         form.name.focus();
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -160,7 +222,9 @@ adminReady.then(() => {
                 name: form.name.value,
                 sort_order: Number(form.sort_order.value) || 0,
                 is_active: form.is_active.checked,
+                link_url: readLinkChooser(form),
             };
+            if (!linkBox.hidden && form.kind.value === 'link' && !data.link_url) return toast('กรุณากรอกลิงก์', 'error');
             save(form, close, () => (isNew ? API.post('/api/categories/sub', data) : API.put(`/api/categories/sub/${s.sc_id}`, data)));
         });
     }

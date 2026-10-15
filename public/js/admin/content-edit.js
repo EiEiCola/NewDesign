@@ -11,8 +11,10 @@ adminReady.then(async () => {
 
     try {
         const { categories } = await API.get('/api/categories');
+        // Right-side link items open another website, so they cannot hold posts
         form.sc_id.innerHTML += categories
-            .filter((m) => m.subs.length)
+            .map((m) => ({ ...m, subs: m.side === 3 ? m.subs.filter((s) => !s.link_url) : m.subs }))
+            .filter((m) => m.subs.length && !(m.side === 3 && m.link_url))
             .map((m) => `
                 <optgroup label="${esc(m.name)} (${esc(SIDE_LABEL[m.side])})">
                     ${m.subs.map((s) => `<option value="${s.sc_id}" ${s.is_active && m.is_active ? '' : 'class="text-slate-400"'}>${esc(s.name)}${s.is_active && m.is_active ? '' : ' (ปิดใช้งาน)'}</option>`).join('')}

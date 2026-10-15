@@ -22,16 +22,20 @@ const HEADER = `(SELECT TOP 1 file_path FROM dbo.Content_media cm WHERE cm.c_id 
 /** Sidebar menus: active main categories with active sub categories, grouped by side. */
 async function menu(req, res) {
     const { recordset } = await db.query(
-        `SELECT m.mc_id, m.name AS main_name, m.side, s.sc_id, s.name AS sub_name
+        `SELECT m.mc_id, m.name AS main_name, m.side, m.link_url AS main_link, s.sc_id, s.name AS sub_name, s.link_url AS sub_link
          FROM dbo.Main_category m
          LEFT JOIN dbo.Sub_category s ON s.mc_id = m.mc_id AND s.is_active = 1
          WHERE m.is_active = 1
          ORDER BY m.side, m.sort_order, m.mc_id, s.sort_order, s.sc_id`
     );
     const byMain = new Map();
+    // Links are only used on the right side (a category moved to another side keeps a stale value)
+    const link = (side, url) => (side === SIDE.RIGHT && url) || null;
     for (const r of recordset) {
-        if (!byMain.has(r.mc_id)) byMain.set(r.mc_id, { mc_id: r.mc_id, name: r.main_name, side: r.side, subs: [] });
-        if (r.sc_id) byMain.get(r.mc_id).subs.push({ sc_id: r.sc_id, name: r.sub_name });
+        if (!byMain.has(r.mc_id)) {
+            byMain.set(r.mc_id, { mc_id: r.mc_id, name: r.main_name, side: r.side, link_url: link(r.side, r.main_link), subs: [] });
+        }
+        if (r.sc_id) byMain.get(r.mc_id).subs.push({ sc_id: r.sc_id, name: r.sub_name, link_url: link(r.side, r.sub_link) });
     }
     const mains = [...byMain.values()];
     res.json({

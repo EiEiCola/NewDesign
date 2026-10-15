@@ -3,6 +3,11 @@
    Run with: npm run db:init   (or execute in SSMS, batch by batch)
    ========================================================= */
 
+/* IDs continue one by one: by default SQL Server pre-allocates 1000 IDENTITY values
+   and skips them after a restart (1, 2, 3 → 1002). SQL Server 2017+ */
+ALTER DATABASE SCOPED CONFIGURATION SET IDENTITY_CACHE = OFF;
+GO
+
 /* ---------- Role ---------- */
 IF OBJECT_ID('dbo.Role', 'U') IS NULL
 CREATE TABLE dbo.Role (
@@ -42,9 +47,14 @@ CREATE TABLE dbo.Main_category (
     side        TINYINT NOT NULL DEFAULT 2 CHECK (side IN (1, 2, 3)),  -- 1=center 2=left 3=right
     sort_order  INT NOT NULL DEFAULT 0,
     is_active   BIT NOT NULL DEFAULT 1,
+    link_url    NVARCHAR(500) NULL,                                   -- right side only: menu item opens this URL
     create_at   DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     create_by   INT NULL REFERENCES dbo.User_account(uc_id)           -- NULL for seeded rows
 );
+GO
+
+IF COL_LENGTH('dbo.Main_category', 'link_url') IS NULL
+ALTER TABLE dbo.Main_category ADD link_url NVARCHAR(500) NULL;
 GO
 
 /* ---------- Sub_category ---------- */
@@ -55,9 +65,14 @@ CREATE TABLE dbo.Sub_category (
     name        NVARCHAR(200) NOT NULL,
     sort_order  INT NOT NULL DEFAULT 0,
     is_active   BIT NOT NULL DEFAULT 1,
+    link_url    NVARCHAR(500) NULL,                                   -- right side only: opens this URL instead of a post list
     create_at   DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     create_by   INT NULL REFERENCES dbo.User_account(uc_id)
 );
+GO
+
+IF COL_LENGTH('dbo.Sub_category', 'link_url') IS NULL
+ALTER TABLE dbo.Sub_category ADD link_url NVARCHAR(500) NULL;
 GO
 
 /* ---------- Content ---------- */

@@ -3,7 +3,7 @@
  * When the API is not reachable (e.g. the HTML file is opened directly) the static markup stays as is.
  *
  *   #sidebar-left       replaced with left-side categories
- *   #sidebar-right-cms  filled with right-side categories (static links below it are kept)
+ *   #sidebar-right-cms  replaced with right-side categories (System Online)
  *   #pr-carousel        replaced with posts from center-side categories
  *   #login-link         shows the logged-in user
  */
@@ -27,23 +27,44 @@ const CMS = (function () {
 
     const currentSc = Number(new URLSearchParams(location.search).get('sc')) || null;
 
-    /** Same markup as the original static sidebar so main.js toggleMenu() keeps working. */
-    function menuHtml(mains) {
+    /**
+     * Same markup as the original static sidebar so main.js toggleMenu() keeps working.
+     * `right` uses the look of the right "System Online" panel (Operation Services): network icon, compact link rows.
+     */
+    function menuHtml(mains, { right = false } = {}) {
+        const subClass = right
+            ? 'flex items-center py-[3px] text-[12px] leading-snug hover:text-primary'
+            : 'flex items-center py-1 hover:text-primary';
         return mains.map((m) => {
+            // Right side: a main category can be a single link to another website
+            if (m.link_url) {
+                return `
+            <li>
+                <a href="${esc(m.link_url)}" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-2.5 p-2 rounded hover:bg-slate-200/50 text-slate-700 hover:text-primary font-medium transition-colors">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-blue-500 text-xs"></i>
+                    ${esc(m.name)}
+                </a>
+            </li>`;
+            }
             const open = !currentSc || m.subs.some((s) => s.sc_id === currentSc);
             return `
             <li>
                 <button class="menu-toggle w-full flex items-center justify-between p-2 rounded hover:bg-slate-200/50 text-slate-700 hover:text-primary font-medium transition-colors group" onclick="toggleMenu(null, this)">
                     <span class="flex items-center gap-2.5">
-                        <i class="fa-solid ${open ? 'fa-folder-open' : 'fa-folder'} text-yellow-500 folder-icon"></i>
+                        ${right
+                            ? '<i class="fa-solid fa-network-wired text-blue-500 text-xs"></i>'
+                            : `<i class="fa-solid ${open ? 'fa-folder-open' : 'fa-folder'} text-yellow-500 folder-icon"></i>`}
                         ${esc(m.name)}
                     </span>
                     <i class="fa-solid fa-chevron-right text-[9px] text-slate-400 menu-icon ${open ? 'rotate' : ''}"></i>
                 </button>
-                <ul class="submenu pl-7 mt-1 space-y-1 text-slate-500 ${open ? 'open' : ''}" style="max-height: ${open ? '2000px' : '0'}; opacity: ${open ? 1 : 0};">
-                    ${m.subs.map((s) => `
-                        <li><a href="category.html?sc=${s.sc_id}" class="flex items-center py-1 hover:text-primary ${s.sc_id === currentSc ? 'text-primary font-semibold' : ''}">
-                            <i class="fa-regular fa-file-lines mr-2 text-slate-400 text-xs"></i>${esc(s.name)}
+                <ul class="submenu ${right ? 'pl-4' : 'pl-7'} mt-1 space-y-1 text-slate-500 ${open ? 'open' : ''}" style="max-height: ${open ? '2000px' : '0'}; opacity: ${open ? 1 : 0};">
+                    ${m.subs.map((s) => s.link_url ? `
+                        <li><a href="${esc(s.link_url)}" target="_blank" rel="noopener noreferrer" class="${subClass}">
+                            <i class="fa-solid fa-link ${right ? 'text-[8px]' : 'text-[10px]'} text-slate-300 mr-2"></i>${esc(s.name)}
+                        </a></li>` : `
+                        <li><a href="category.html?sc=${s.sc_id}" class="${subClass} ${s.sc_id === currentSc ? 'text-primary font-semibold' : ''}">
+                            <i class="fa-regular fa-file-lines mr-2 ${right ? 'text-[10px] text-slate-300' : 'text-xs text-slate-400'}"></i>${esc(s.name)}
                         </a></li>`).join('')}
                     ${m.subs.length ? '' : '<li class="py-1 text-[12px] text-slate-400">ยังไม่มีหมวดหมู่รอง</li>'}
                 </ul>
@@ -56,7 +77,7 @@ const CMS = (function () {
         const left = document.getElementById('sidebar-left');
         if (left && menu.left.length) left.innerHTML = menuHtml(menu.left);
         const right = document.getElementById('sidebar-right-cms');
-        if (right && menu.right.length) right.innerHTML = menuHtml(menu.right);
+        if (right && menu.right.length) right.innerHTML = menuHtml(menu.right, { right: true });
         return menu;
     }
 
