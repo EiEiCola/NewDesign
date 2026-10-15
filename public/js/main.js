@@ -3,23 +3,23 @@ function toggleMenu(menuId, button) {
     const menu = button.nextElementSibling; // not by id: several folders share the same id
     const icon = button.querySelector('.menu-icon');
     const folder = button.querySelector('.folder-icon');
-    
+
     if (menu.classList.contains('open')) {
         menu.classList.remove('open');
         menu.style.maxHeight = '0';
         menu.style.opacity = '0';
         icon.classList.remove('rotate');
-        
+
         if(folder && folder.classList.contains('fa-folder-open')) {
             folder.classList.remove('fa-folder-open');
             folder.classList.add('fa-folder');
         }
     } else {
         menu.classList.add('open');
-        menu.style.maxHeight = '2000px'; 
+        menu.style.maxHeight = '2000px';
         menu.style.opacity = '1';
         icon.classList.add('rotate');
-        
+
         if(folder && folder.classList.contains('fa-folder')) {
             folder.classList.remove('fa-folder');
             folder.classList.add('fa-folder-open');
@@ -27,12 +27,11 @@ function toggleMenu(menuId, button) {
     }
 }
 
-// Carousel functionality
+// Carousel functionality (call initCarousel() again after the slides are replaced)
 let currentSlide = 0;
-const slides = document.querySelectorAll('#pr-carousel > div');
-const totalSlides = slides.length;
-const carousel = document.getElementById('pr-carousel');
-const dots = document.querySelectorAll('#carousel-dots button');
+let totalSlides = 0;
+let carousel;
+let dots = [];
 let autoPlayInterval;
 
 function updateSlide() {
@@ -49,33 +48,45 @@ function updateSlide() {
 }
 
 function nextSlide() {
+    if (!totalSlides) return;
     currentSlide = (currentSlide + 1) % totalSlides;
     updateSlide();
 }
 
 function prevSlide() {
+    if (!totalSlides) return;
     currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
     updateSlide();
 }
 
 function startAutoPlay() {
-    autoPlayInterval = setInterval(nextSlide, 5000);
+    stopAutoPlay();
+    if (totalSlides > 1) autoPlayInterval = setInterval(nextSlide, 5000);
 }
 
 function stopAutoPlay() {
     clearInterval(autoPlayInterval);
 }
 
-dots.forEach((dot, index) => {
-    dot.addEventListener('click', () => {
-        currentSlide = index;
-        updateSlide();
+function initCarousel() {
+    carousel = document.getElementById('pr-carousel');
+    if (!carousel) return;
+    totalSlides = carousel.children.length;
+    dots = document.querySelectorAll('#carousel-dots button');
+    currentSlide = 0;
+    dots.forEach((dot, index) => {
+        dot.onclick = () => {
+            currentSlide = index;
+            updateSlide();
+        };
     });
-});
+    updateSlide();
+    startAutoPlay();
+}
 
 const container = document.getElementById('pr-carousel-container');
 if (container) {
     container.addEventListener('mouseenter', stopAutoPlay);
     container.addEventListener('mouseleave', startAutoPlay);
-    startAutoPlay();
+    initCarousel();
 }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ | Sirivatana Intranet CMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-background font-sans text-slate-700 antialiased min-h-screen flex flex-col">
+
+    <div class="w-full bg-slate-900 flex justify-center">
+        <div class="w-full max-w-[1400px] h-[90px] relative overflow-hidden">
+            <img src="../images/siri_bg.gif" alt="Sirivatana Interprint PCL - Intranet" class="absolute inset-0 w-full h-full object-cover">
+        </div>
+    </div>
+
+    <main class="flex-1 flex items-center justify-center p-4">
+        <form id="login-form" class="w-full max-w-sm bg-white border border-slate-200 rounded-lg shadow-soft p-6" novalidate>
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fa-solid fa-lock text-primary"></i>
+                <h1 class="text-lg font-bold text-slate-800">เข้าสู่ระบบ</h1>
+            </div>
+            <p class="text-[12px] text-slate-400 mb-5">ระบบจัดการเนื้อหา (CMS) Sirivatana Intranet</p>
+
+            <div id="login-error" class="hidden mb-4 text-[12px] text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2" role="alert"></div>
+
+            <label class="admin-label" for="username">ชื่อผู้ใช้</label>
+            <input id="username" name="username" class="admin-input mb-3" autocomplete="username" required autofocus>
+
+            <label class="admin-label" for="password">รหัสผ่าน</label>
+            <div class="relative mb-5">
+                <input id="password" name="password" type="password" class="admin-input pr-9" autocomplete="current-password" required>
+                <button type="button" id="toggle-password" class="absolute right-0 top-0 bottom-0 px-3 text-slate-400 hover:text-primary" aria-label="แสดงรหัสผ่าน">
+                    <i class="fa-regular fa-eye text-xs"></i>
+                </button>
+            </div>
+
+            <button type="submit" id="login-btn" class="btn btn-primary w-full justify-center py-2">
+                <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+            </button>
+
+            <a href="../index.html" class="block text-center text-[12px] text-slate-400 hover:text-primary mt-4">
+                <i class="fa-solid fa-arrow-left text-[10px]"></i> กลับหน้าแรก
+            </a>
+        </form>
+    </main>
+
+    <script src="../js/admin/api.js"></script>
+    <script src="../js/admin/login.js"></script>
+</body>
+</html>

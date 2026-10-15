@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไขโพสต์ | Intranet CMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/rich-body.css">
+</head>
+<body class="bg-background font-sans text-slate-700 antialiased" data-page="content-edit">
+    <div class="md:flex min-h-screen">
+        <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-2">
+            <span class="font-bold text-[14px]">Intranet CMS</span>
+            <button id="nav-toggle" type="button" class="w-8 h-8" aria-label="เมนู"><i class="fa-solid fa-bars"></i></button>
+        </div>
+        <aside id="admin-nav" class="hidden md:flex flex-col w-full md:w-60 bg-slate-900 py-4 px-2 md:sticky md:top-0 md:h-screen flex-shrink-0"></aside>
+
+        <main id="page" class="flex-1 min-w-0 p-4 md:p-6" hidden>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <a href="contents.html" class="text-[12px] text-slate-400 hover:text-primary"><i class="fa-solid fa-arrow-left text-[10px]"></i> รายการโพสต์</a>
+                    <h1 class="text-xl font-bold text-slate-800" id="page-title">สร้างโพสต์</h1>
+                </div>
+                <a id="view-link" href="#" target="_blank" class="btn btn-ghost hidden"><i class="fa-solid fa-arrow-up-right-from-square"></i> ดูหน้าเว็บ</a>
+            </div>
+
+            <form id="content-form" class="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4" novalidate>
+                <!-- Left: title + body + media -->
+                <div class="space-y-4 min-w-0">
+                    <div class="bg-white border border-slate-200 rounded-lg p-4">
+                        <label class="admin-label" for="title">หัวข้อ *</label>
+                        <input id="title" name="title" class="admin-input !text-[15px] font-semibold" maxlength="300" placeholder="หัวข้อโพสต์">
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-lg">
+                        <div id="toolbar" class="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-slate-200 bg-slate-50 rounded-t-lg sticky top-0 z-10">
+                            <button type="button" data-cmd="bold" title="ตัวหนา" class="tb"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" data-cmd="italic" title="ตัวเอียง" class="tb"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" data-cmd="underline" title="ขีดเส้นใต้" class="tb"><i class="fa-solid fa-underline"></i></button>
+                            <span class="w-px h-5 bg-slate-300 mx-1"></span>
+                            <button type="button" data-block="h2" title="หัวข้อใหญ่" class="tb font-bold text-[12px]">H2</button>
+                            <button type="button" data-block="h3" title="หัวข้อย่อย" class="tb font-bold text-[12px]">H3</button>
+                            <button type="button" data-block="p" title="ย่อหน้าปกติ" class="tb"><i class="fa-solid fa-paragraph"></i></button>
+                            <span class="w-px h-5 bg-slate-300 mx-1"></span>
+                            <button type="button" data-cmd="insertUnorderedList" title="รายการแบบจุด" class="tb"><i class="fa-solid fa-list-ul"></i></button>
+                            <button type="button" data-cmd="insertOrderedList" title="รายการแบบตัวเลข" class="tb"><i class="fa-solid fa-list-ol"></i></button>
+                            <button type="button" data-cmd="justifyLeft" title="ชิดซ้าย" class="tb"><i class="fa-solid fa-align-left"></i></button>
+                            <button type="button" data-cmd="justifyCenter" title="กึ่งกลาง" class="tb"><i class="fa-solid fa-align-center"></i></button>
+                            <button type="button" data-cmd="justifyRight" title="ชิดขวา" class="tb"><i class="fa-solid fa-align-right"></i></button>
+                            <span class="w-px h-5 bg-slate-300 mx-1"></span>
+                            <button type="button" id="btn-link" title="ใส่ลิงก์" class="tb"><i class="fa-solid fa-link"></i></button>
+                            <button type="button" id="btn-inline-image" title="แทรกรูปคั่นเนื้อหา" class="tb"><i class="fa-regular fa-image"></i></button>
+                            <button type="button" data-cmd="insertHorizontalRule" title="เส้นคั่น" class="tb"><i class="fa-solid fa-minus"></i></button>
+                            <button type="button" data-cmd="removeFormat" title="ล้างรูปแบบ" class="tb"><i class="fa-solid fa-text-slash"></i></button>
+                        </div>
+                        <div id="editor" class="rich-body editor-area" contenteditable="true" data-placeholder="เขียนเนื้อหาที่นี่... (กดปุ่มรูปภาพบนแถบเครื่องมือเพื่อแทรกรูปคั่นเนื้อหา)"></div>
+                        <input type="file" id="inline-file" accept="image/*" hidden>
+                    </div>
+
+                    <!-- Media (available after first save) -->
+                    <div class="bg-white border border-slate-200 rounded-lg p-4 space-y-5" id="media-panel">
+                        <p id="media-hint" class="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                            เมื่อเพิ่มรูปหรือไฟล์ ระบบจะบันทึกโพสต์เป็นร่างให้อัตโนมัติก่อน
+                        </p>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-[13px] text-slate-800"><i class="fa-solid fa-panorama text-primary mr-1"></i> รูป Header (รูปปก)</h3>
+                                <label class="btn btn-ghost cursor-pointer"><i class="fa-solid fa-upload"></i> เลือกรูป<input type="file" accept="image/*" data-kind="header" hidden></label>
+                            </div>
+                            <div id="media-header"></div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-[13px] text-slate-800"><i class="fa-solid fa-images text-primary mr-1"></i> รูปประกอบ (แกลเลอรี่)</h3>
+                                <label class="btn btn-ghost cursor-pointer"><i class="fa-solid fa-upload"></i> เพิ่มรูป<input type="file" accept="image/*" multiple data-kind="gallery" hidden></label>
+                            </div>
+                            <div id="media-gallery" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-[13px] text-slate-800"><i class="fa-solid fa-paperclip text-primary mr-1"></i> ไฟล์แนบ</h3>
+                                <label class="btn btn-ghost cursor-pointer"><i class="fa-solid fa-upload"></i> เพิ่มไฟล์<input type="file" multiple data-kind="attachment" hidden></label>
+                            </div>
+                            <ul id="media-attachment" class="divide-y divide-slate-100 border border-slate-100 rounded"></ul>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- Right: publish settings -->
+                <aside class="space-y-4">
+                    <div class="bg-white border border-slate-200 rounded-lg p-4 space-y-3 xl:sticky xl:top-4">
+                        <h3 class="font-semibold text-[13px] text-slate-800">การเผยแพร่</h3>
+                        <label class="block"><span class="admin-label">หมวดหมู่ *</span><select name="sc_id" class="admin-input"><option value="">-- เลือกหมวดหมู่ --</option></select></label>
+                        <label class="block"><span class="admin-label">สถานะ</span>
+                            <select name="status" class="admin-input">
+                                <option value="draft">ร่าง (ยังไม่แสดง)</option>
+                                <option value="published">เผยแพร่</option>
+                                <option value="hidden">ซ่อน</option>
+                            </select>
+                        </label>
+                        <label class="block"><span class="admin-label">เริ่มแสดง (ว่าง = แสดงทันที)</span><input type="datetime-local" name="publish_at" class="admin-input"></label>
+                        <label class="block"><span class="admin-label">หมดอายุ (ว่าง = แสดงตลอด)</span><input type="datetime-local" name="expire_at" class="admin-input"></label>
+                        <label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_pinned"> ปักหมุดไว้บนสุด</label>
+                        <div id="meta" class="text-[11px] text-slate-400 space-y-0.5"></div>
+                        <div class="flex gap-2 pt-1">
+                            <button type="submit" id="btn-save" class="btn btn-primary flex-1 justify-center"><i class="fa-solid fa-floppy-disk"></i> บันทึก</button>
+                            <button type="button" id="btn-delete" class="btn btn-danger hidden" title="ลบโพสต์"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </aside>
+            </form>
+        </main>
+    </div>
+
+    <style>
+        .tb { width: 30px; height: 28px; border-radius: 4px; color: #475569; font-size: 12px; }
+        .tb:hover { background: #ede9fe; color: #6d28d9; }
+    </style>
+    <script src="../js/admin/api.js"></script>
+    <script src="../js/admin/layout.js"></script>
+    <script src="../js/admin/content-edit.js"></script>
+</body>
+</html>

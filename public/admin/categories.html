@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>หมวดหมู่ | Intranet CMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="bg-background font-sans text-slate-700 antialiased" data-page="categories" data-role="admin">
+    <div class="md:flex min-h-screen">
+        <div class="md:hidden flex items-center justify-between bg-slate-900 text-white px-4 py-2">
+            <span class="font-bold text-[14px]">Intranet CMS</span>
+            <button id="nav-toggle" type="button" class="w-8 h-8" aria-label="เมนู"><i class="fa-solid fa-bars"></i></button>
+        </div>
+        <aside id="admin-nav" class="hidden md:flex flex-col w-full md:w-60 bg-slate-900 py-4 px-2 md:sticky md:top-0 md:h-screen flex-shrink-0"></aside>
+
+        <main id="page" class="flex-1 min-w-0 p-4 md:p-6" hidden>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+                <h1 class="text-xl font-bold text-slate-800">หมวดหมู่</h1>
+                <button type="button" id="btn-add-main" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> เพิ่มหมวดหมู่</button>
+            </div>
+            <p class="text-[12px] text-slate-500 mb-4">
+                ตำแหน่ง <b>ซ้าย/ขวา</b> = แสดงเป็นเมนูใน sidebar · <b>กลาง</b> = โพสต์ในหมวดนี้ขึ้นข่าวด้านบนหน้าแรก ·
+                ลำดับเลขน้อยแสดงก่อน · หมวดที่มีโพสต์ลบไม่ได้ ให้ปิดใช้งานแทน
+            </p>
+
+            <div id="groups" class="space-y-6"></div>
+        </main>
+    </div>
+
+    <script src="../js/admin/api.js"></script>
+    <script src="../js/admin/layout.js"></script>
+    <script src="../js/admin/categories.js"></script>
+</body>
+</html>
