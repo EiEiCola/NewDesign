@@ -24,13 +24,13 @@
     <div class="w-full bg-slate-900 flex flex-col items-center sticky top-0 z-30 shadow-md">
         <div class="w-full max-w-[1400px] h-[90px] relative overflow-hidden bg-slate-900">
             <!-- Header Content -->
-            <img src="siri_bg.gif" alt="Sirivatana Interprint PCL - Intranet" class="absolute inset-0 w-full h-full object-cover">
+            <img src="images/siri_bg.gif" alt="Sirivatana Interprint PCL - Intranet" class="absolute inset-0 w-full h-full object-cover">
         </div>
 
         <!-- Slim Navigation Strip -->
         <div class="w-full max-w-[1400px] h-8 flex items-center justify-end gap-5 px-6 lg:px-8 bg-slate-900 border-t border-white/10">
             <nav class="flex gap-5 text-xs font-medium text-slate-300">
-                <a href="index.html" class="hover:text-white transition-colors">Home</a><a href="#" class="hover:text-white transition-colors">Job Status</a><a href="marketing.html" class="text-white font-semibold border-b border-purple-400">Marketing</a><a href="announcements.html" class="hover:text-white transition-colors">ประกาศ</a><a href="#" class="hover:text-white transition-colors">Production</a><a href="#" class="hover:text-white transition-colors">Delivery</a>
+                <a href="index.html" class="hover:text-white transition-colors">Home</a><a href="#" class="hover:text-white transition-colors">Job Status</a><a href="marketing.html" class="hover:text-white transition-colors">Marketing</a><a href="announcements.html" class="hover:text-white transition-colors">ประกาศ</a><a href="#" class="hover:text-white transition-colors">Production</a><a href="#" class="hover:text-white transition-colors">Delivery</a>
             </nav>
             <a href="#" class="flex items-center gap-1.5 px-3 py-0.5 bg-white/10 hover:bg-white hover:text-purple-900 text-white rounded border border-white/30 transition-all text-xs font-semibold">
                 <i class="fa-solid fa-right-to-bracket text-[10px]"></i>
@@ -160,76 +160,43 @@
             </ul>
         </aside>
 
-        <!-- Center Column (Marketing) -->
+        <!-- Center Column (Glossary) -->
         <main class="flex-1 min-w-0 bg-white p-5 overflow-y-auto">
 
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-2 text-[11px] text-slate-400 mb-4" aria-label="breadcrumb">
                 <a href="index.html" class="hover:text-primary">Home</a>
                 <i class="fa-solid fa-chevron-right text-[8px]"></i>
-                <a href="marketing.html" class="hover:text-primary" id="crumb-marketing">Marketing</a>
-                <span id="crumb-report" class="hidden items-center gap-2">
-                    <i class="fa-solid fa-chevron-right text-[8px]"></i>
-                    <span class="text-slate-600" id="crumb-report-name"></span>
-                </span>
+                <span class="text-slate-600">Knowledge Base Glossary</span>
             </nav>
 
-            <!-- View 1: Marketing Report list -->
-            <section id="view-list">
-                <h2 class="text-slate-800 font-bold text-lg mb-4 flex items-center gap-2">
-                    <i class="fa-solid text-primary"></i> Marketing Report
-                </h2>
-                <ul id="report-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></ul>
-            </section>
+            <h2 class="text-slate-800 font-bold text-lg mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-book-open text-primary"></i> Knowledge Base Glossary
+            </h2>
+            <p class="text-[12px] text-slate-400 mb-4">พจนานุกรมคำศัพท์ภายในองค์กร</p>
 
-            <!-- View 2: Report table -->
-            <section id="view-report" class="hidden">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-slate-800 font-bold text-lg flex items-center gap-2">
-                        <i class="fa-solid fa-table-list text-primary"></i>
-                        <span id="report-title">Report</span>
-                    </h2>
-                    <button type="button" id="btn-back" class="text-[12px] text-slate-500 hover:text-primary flex items-center gap-1.5">
-                        <i class="fa-solid fa-arrow-left text-[10px]"></i> กลับไปรายการ
-                    </button>
+            <!-- Search + A-Z filter -->
+            <div class="bg-surface border border-slate-200 rounded-lg p-3 mb-4">
+                <div class="relative mb-3">
+                    <input type="text" id="term-search" placeholder="ค้นหาคำศัพท์..." class="w-full px-3 py-1.5 pr-8 bg-white border border-slate-300 rounded text-[13px] focus:outline-none focus:border-primary">
+                    <i class="fa-solid fa-magnifying-glass text-xs text-slate-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
                 </div>
+                <div id="letters" class="flex flex-wrap gap-1"></div>
+            </div>
 
-                <!-- Filters -->
-                <form id="report-filter" class="hidden flex-wrap items-end gap-3 bg-surface border border-slate-200 rounded-lg p-3 mb-4">
-                    <label class="text-[11px] text-slate-500 flex flex-col gap-1">ปี (Year)
-                        <select id="filter-year" class="px-3 py-1.5 bg-white border border-slate-300 rounded text-[13px] text-slate-700 focus:outline-none focus:border-primary w-28"></select>
-                    </label>
-                    <label class="text-[11px] text-slate-500 flex flex-col gap-1">เดือน (Month)
-                        <select id="filter-month" class="px-3 py-1.5 bg-white border border-slate-300 rounded text-[13px] text-slate-700 focus:outline-none focus:border-primary w-40"></select>
-                    </label>
-                    <button type="submit" class="px-4 py-1.5 bg-primary hover:bg-purple-800 text-white rounded text-[13px] font-semibold flex items-center gap-2 transition-colors">
-                        <i class="fa-solid fa-magnifying-glass text-xs"></i> แสดงรายงาน
-                    </button>
-                </form>
-
-                <!-- Table -->
-                <div class="border border-slate-200 rounded-lg overflow-hidden">
-                    <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
-                        <span id="table-caption" class="font-semibold text-[13px] text-slate-700"></span>
-                        <span class="text-[10px] text-slate-400">ข้อมูลตัวอย่าง (Sample data)</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-[12px] text-left">
-                            <thead id="table-head" class="text-slate-500 bg-white border-b border-slate-200"></thead>
-                            <tbody id="table-body" class="divide-y divide-slate-100"></tbody>
-                            <tfoot id="table-foot"></tfoot>
-                        </table>
-                    </div>
-                </div>
-            </section>
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[11px] text-slate-400">ข้อมูลตัวอย่าง (Sample data)</span>
+                <span id="result-count" class="text-[11px] text-slate-500"></span>
+            </div>
+            <ul id="term-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></ul>
 
             <footer class="pt-6 text-center text-[10px] text-slate-400">
-                &copy; 2026 Sirivatana All rights reserved.
+                &copy; 2026 Sirivatana Intranet. All rights reserved.
             </footer>
         </main>
     </div>
 
     <script src="js/main.js"></script>
-    <script src="js/marketing.js"></script>
+    <script src="js/glossary.js"></script>
 </body>
 </html>
