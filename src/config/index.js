@@ -28,6 +28,8 @@ module.exports = {
         options: {
             encrypt: process.env.DB_ENCRYPT === 'true',
             trustServerCertificate: process.env.DB_TRUST_SERVER_CERT !== 'false',
+            // SYSDATETIME() stores the server's local time, so read/write dates as local time too
+            useUTC: false,
         },
         pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
     },

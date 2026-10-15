@@ -27,7 +27,8 @@ function bool(value) {
 /** Date or null; throws on an invalid non-empty value. */
 function date(value, field) {
     if (value === null || value === undefined || value === '') return null;
-    const d = new Date(value);
+    // "YYYY-MM-DD" alone would be parsed as UTC midnight; treat it as local midnight instead
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value);
     if (Number.isNaN(d.getTime())) throw badRequest(`${field} ไม่ถูกต้อง`);
     return d;
 }
