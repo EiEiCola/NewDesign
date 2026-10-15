@@ -37,21 +37,57 @@ function readMain(body) {
     };
 }
 
+/** Optional `subs`: names of sub categories to create together with the main category (blank names are skipped). */
+function readSubNames(value) {
+    if (value === undefined) return [];
+    if (!Array.isArray(value)) throw badRequest('รายการหมวดหมู่รองไม่ถูกต้อง');
+    const names = value.map((n) => v.str(n, 'ชื่อหมวดหมู่รอง', { max: 200 })).filter(Boolean);
+    if (names.length > 50) throw badRequest('เพิ่มหมวดหมู่รองได้ครั้งละไม่เกิน 50 รายการ');
+    return names;
+}
+
 async function createMain(req, res) {
     const d = readMain(req.body);
-    const { recordset } = await db.query(
-        `INSERT INTO dbo.Main_category (name, side, sort_order, is_active, create_by)
-         OUTPUT INSERTED.mc_id VALUES (@name, @side, @sortOrder, @isActive, @by)`,
-        { ...d, by: req.user.ucId }
-    );
-    const mcId = recordset[0].mc_id;
+    const subNames = readSubNames(req.body.subs);
+    const by = req.user.ucId;
+
+    // Main + subs in one transaction: either all are created or none
+    const { mcId, subIds } = await db.transaction(async (tx) => {
+        const { recordset } = await db.query(
+            `INSERT INTO dbo.Main_category (name, side, sort_order, is_active, create_by)
+             OUTPUT INSERTED.mc_id VALUES (@name, @side, @sortOrder, @isActive, @by)`,
+            { ...d, by },
+            tx
+        );
+        const mcId = recordset[0].mc_id;
+        const subIds = [];
+        for (const [i, name] of subNames.entries()) {
+            const sub = await db.query(
+                `INSERT INTO dbo.Sub_category (mc_id, name, sort_order, is_active, create_by)
+                 OUTPUT INSERTED.sc_id VALUES (@mcId, @name, @sortOrder, 1, @by)`,
+                { mcId, name, sortOrder: i + 1, by },
+                tx
+            );
+            subIds.push(sub.recordset[0].sc_id);
+        }
+        return { mcId, subIds };
+    });
+
     await audit.log(req, {
         action: ACTION.CREATE,
         targetType: 'main_category',
         targetId: mcId,
-        message: `สร้างหมวดหมู่หลัก: ${d.name} (${SIDE_LABEL[d.side]})`,
+        message: `สร้างหมวดหมู่หลัก: ${d.name} (${SIDE_LABEL[d.side]})${subNames.length ? ` พร้อมหมวดหมู่รอง ${subNames.length} รายการ` : ''}`,
     });
-    res.status(201).json({ mc_id: mcId });
+    for (const [i, scId] of subIds.entries()) {
+        await audit.log(req, {
+            action: ACTION.CREATE,
+            targetType: 'sub_category',
+            targetId: scId,
+            message: `สร้างหมวดหมู่รอง: ${d.name} › ${subNames[i]}`,
+        });
+    }
+    res.status(201).json({ mc_id: mcId, sc_ids: subIds });
 }
 
 async function updateMain(req, res) {

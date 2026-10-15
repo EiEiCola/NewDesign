@@ -66,7 +66,7 @@ adminReady.then(() => {
     function mainModal(m) {
         const isNew = !m;
         m = m || { name: '', side: 2, sort_order: nextOrder(categories), is_active: true };
-        const { el, close } = openModal(isNew ? 'เพิ่มหมวดหมู่หลัก' : 'แก้ไขหมวดหมู่หลัก', `
+        const { el, close } = openModal(isNew ? 'เพิ่มหมวดหมู่' : 'แก้ไขหมวดหมู่หลัก', `
             <form class="space-y-3" novalidate>
                 <div><label class="admin-label">ชื่อหมวดหมู่หลัก *</label><input name="name" class="admin-input" maxlength="200" value="${esc(m.name)}"></div>
                 <div class="grid grid-cols-2 gap-3">
@@ -76,12 +76,49 @@ adminReady.then(() => {
                     <div><label class="admin-label">ลำดับ</label><input name="sort_order" type="number" class="admin-input" value="${m.sort_order}"></div>
                 </div>
                 <label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_active" ${m.is_active ? 'checked' : ''}> เปิดใช้งาน</label>
+                ${isNew ? `
+                <div class="border-t border-slate-100 pt-3">
+                    <label class="admin-label">หมวดหมู่รอง <span class="text-slate-400">(ไม่บังคับ · เรียงลำดับตามที่กรอก)</span></label>
+                    <div data-subs class="space-y-2"></div>
+                    <button type="button" data-add-row class="text-[12px] text-primary hover:underline mt-2"><i class="fa-solid fa-plus text-[10px]"></i> เพิ่มช่องหมวดหมู่รอง</button>
+                </div>` : ''}
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" class="btn btn-ghost" data-close>ยกเลิก</button>
                     <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> บันทึก</button>
                 </div>
             </form>`);
         const form = el.querySelector('form');
+        const subsEl = el.querySelector('[data-subs]');
+
+        function addSubRow() {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            row.innerHTML = `
+                <i class="fa-regular fa-file-lines text-slate-400 text-xs"></i>
+                <input data-sub-name class="admin-input" maxlength="200" placeholder="ชื่อหมวดหมู่รอง">
+                <button type="button" data-remove-row class="text-slate-400 hover:text-red-600 w-6" title="เอาออก"><i class="fa-solid fa-xmark"></i></button>`;
+            subsEl.appendChild(row);
+            return row.querySelector('input');
+        }
+
+        if (subsEl) {
+            addSubRow();
+            el.querySelector('[data-add-row]').addEventListener('click', () => addSubRow().focus());
+            subsEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-remove-row]');
+                if (!btn) return;
+                btn.parentElement.remove();
+                if (!subsEl.children.length) addSubRow();
+            });
+            // Enter in a sub-category box adds the next box instead of submitting
+            subsEl.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' || !e.target.matches('[data-sub-name]')) return;
+                e.preventDefault();
+                const next = e.target.parentElement.nextElementSibling;
+                (next ? next.querySelector('input') : addSubRow()).focus();
+            });
+        }
+
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const data = {
@@ -90,6 +127,9 @@ adminReady.then(() => {
                 sort_order: Number(form.sort_order.value) || 0,
                 is_active: form.is_active.checked,
             };
+            if (subsEl) {
+                data.subs = [...subsEl.querySelectorAll('[data-sub-name]')].map((i) => i.value.trim()).filter(Boolean);
+            }
             save(form, close, () => (isNew ? API.post('/api/categories/main', data) : API.put(`/api/categories/main/${m.mc_id}`, data)));
         });
     }
