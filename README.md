@@ -44,13 +44,10 @@ copy .env.example .env        # Windows (cmd)
 # cp .env.example .env        # macOS / Linux / Git Bash
 
 # 3) สร้างฐานข้อมูล + ตาราง + ข้อมูลเริ่มต้น (role, หมวดหมู่จาก sidebar เดิม)
+#    + บัญชี admin / user ตามค่า SEED_* ใน .env
 npm run db:init
 
-# 4) สร้างบัญชีผู้ดูแลระบบคนแรก
-npm run create-admin -- <รหัสพนักงาน> <ชื่อ> <นามสกุล> <username> <password>
-#    ตัวอย่าง: npm run create-admin -- 2559001 สมชาย ใจดี admin MyPassw0rd!
-
-# 5) รันเซิร์ฟเวอร์
+# 4) รันเซิร์ฟเวอร์
 npm run dev      # โหมดพัฒนา (แก้โค้ดแล้วรีสตาร์ทเอง)
 # npm start      # โหมดใช้งานจริง
 ```
@@ -61,6 +58,20 @@ npm run dev      # โหมดพัฒนา (แก้โค้ดแล้�
 - หลังบ้าน (CMS): <http://localhost:3000/admin/login.html>
 
 > `npm run db:init` รันซ้ำได้ ไม่ลบข้อมูลเดิม (สร้างเฉพาะตาราง/ข้อมูลที่ยังไม่มี)
+
+### บัญชีเริ่มต้น
+
+`db:init` สร้างบัญชีจากค่า `SEED_*` ใน `.env` ให้อัตโนมัติ:
+
+| บัญชี | ค่าใน `.env` | สิทธิ์ |
+|---|---|---|
+| ผู้ดูแลระบบ | `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD` | admin |
+| ผู้ใช้ทั่วไป | `SEED_USER_USERNAME` / `SEED_USER_PASSWORD` | user (ยังโพสต์ไม่ได้ ให้ admin เปลี่ยนเป็น "ผู้โพสต์" หรือใส่ `SEED_USER_ROLE=editor`) |
+
+- แก้รหัสใน `.env` แล้วรัน `npm run db:seed-users` เพื่ออัปเดตรหัส/สิทธิ์ให้ตรงกับ `.env`
+- สร้าง admin เพิ่มแบบไม่ใช้ `.env`:
+  `npm run create-admin -- <รหัสพนักงาน> <ชื่อ> <นามสกุล> <username> <password>`
+- **บนเซิร์ฟเวอร์จริงต้องเปลี่ยนรหัสเริ่มต้น** (เช่น `admin1234`) เป็นรหัสที่เดายาก
 
 ---
 
@@ -86,6 +97,13 @@ JWT_SECRET=change_me_to_a_long_random_string
 JWT_EXPIRES_HOURS=8            # ล็อกอินค้างได้กี่ชั่วโมง
 
 UPLOAD_MAX_MB=20               # ขนาดไฟล์อัปโหลดสูงสุดต่อไฟล์
+
+# บัญชีเริ่มต้น (สร้างตอน npm run db:init / npm run db:seed-users)
+SEED_ADMIN_USERNAME=admin
+SEED_ADMIN_PASSWORD=change_me_admin   # อย่างน้อย 8 ตัว
+SEED_USER_USERNAME=user
+SEED_USER_PASSWORD=change_me_user     # อย่างน้อย 8 ตัว
+# SEED_USER_ROLE=editor               # ถ้าอยากให้ user โพสต์ได้เลย
 ```
 
 สร้าง `JWT_SECRET` แบบสุ่ม:
@@ -130,7 +148,9 @@ NewDesign/
 │   └── seed.sql              # role + หมวดหมู่เริ่มต้น
 ├── scripts/
 │   ├── run-sql.js            # npm run db:init
-│   └── create-admin.js       # npm run create-admin
+│   ├── seed-users.js         # npm run db:seed-users (บัญชีจาก .env)
+│   ├── create-admin.js       # npm run create-admin
+│   └── lib/accounts.js       # ฟังก์ชันสร้าง/อัปเดตบัญชี
 ├── src/                      # Backend (Express)
 │   ├── server.js             # จุดเริ่มรันเซิร์ฟเวอร์
 │   ├── app.js                # ตั้งค่า Express, static files, routes
@@ -184,4 +204,4 @@ NewDesign/
 | ใช้ SQL Server Express แล้วต่อไม่ได้ | Express มักไม่ได้ใช้พอร์ต 1433 ให้ตั้ง TCP Port = 1433 ใน Configuration Manager |
 | `Missing environment variable: JWT_SECRET` | ยังไม่ได้สร้างไฟล์ `.env` |
 | หน้าเว็บแสดงเมนูแบบเดิม ไม่ใช่จาก DB | เปิดไฟล์ HTML ตรงๆ หรือ API ต่อ DB ไม่ได้ ต้องเปิดผ่าน `http://localhost:3000` |
-| เวลาใน Audit log ไม่ตรง | ให้เครื่องที่รัน Node และ SQL Server ตั้ง timezone เดียวกัน |
+| เวลาเพี้ยนไป 7 ชั่วโมง | ระบบเก็บเวลาเป็น UTC ใน DB แล้วแปลงเป็นเวลาไทยตอนแสดงผล ถ้าเปิดดูใน Navicat/SSMS ตรงๆ จะเห็นเป็นเวลา UTC (ช้ากว่าไทย 7 ชั่วโมง) ถือว่าปกติ |
