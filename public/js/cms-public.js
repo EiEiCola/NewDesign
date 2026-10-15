@@ -99,7 +99,13 @@ const CMS = (function () {
     }
 
     function init() {
-        loadMenus().catch(() => {});
+        loadMenus().catch(() => {
+            // Pages without static fallback markup show a "loading" placeholder: replace it
+            const left = document.getElementById('sidebar-left');
+            if (left && left.textContent.trim() === 'กำลังโหลด...') {
+                left.innerHTML = '<li class="text-[12px] text-slate-400 px-2">โหลดเมนูไม่สำเร็จ</li>';
+            }
+        });
         loadCarousel().catch(() => {});
         loadLoginState();
     }

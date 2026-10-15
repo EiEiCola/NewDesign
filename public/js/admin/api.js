@@ -18,7 +18,8 @@ const API = {
         }
         const data = await res.json().catch(() => ({}));
 
-        if (res.status === 401 && !url.startsWith('/api/auth/')) {
+        // Not logged in / session expired → go to the login page (except on the login page itself)
+        if (res.status === 401 && !location.pathname.endsWith('/admin/login.html')) {
             location.href = `/admin/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
             throw new Error(data.error || 'กรุณาเข้าสู่ระบบ');
         }
