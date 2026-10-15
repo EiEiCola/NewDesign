@@ -108,6 +108,30 @@ async function withBusy(button, fn) {
     }
 }
 
+/** Render page buttons into `el`; calls onPage(n) when clicked. */
+function renderPager(el, { page, pageSize, total }, onPage) {
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    if (pages <= 1) {
+        el.innerHTML = '';
+        return;
+    }
+    const nums = [...new Set([1, page - 1, page, page + 1, pages])].filter((n) => n >= 1 && n <= pages);
+    const btn = (n, label, disabled, active) =>
+        `<button type="button" data-page="${n}" ${disabled ? 'disabled' : ''}
+            class="min-w-[30px] h-[30px] px-2 rounded text-[12px] border ${active ? 'bg-primary text-white border-primary' : 'bg-white border-slate-300 text-slate-600 hover:border-primary'} disabled:opacity-40">${label}</button>`;
+    let html = btn(page - 1, '<i class="fa-solid fa-chevron-left text-[10px]"></i>', page === 1);
+    nums.forEach((n, i) => {
+        if (i && n - nums[i - 1] > 1) html += '<span class="px-1 text-slate-400">…</span>';
+        html += btn(n, n, false, n === page);
+    });
+    html += btn(page + 1, '<i class="fa-solid fa-chevron-right text-[10px]"></i>', page === pages);
+    el.innerHTML = html;
+    el.onclick = (e) => {
+        const b = e.target.closest('[data-page]');
+        if (b && !b.disabled) onPage(Number(b.dataset.page));
+    };
+}
+
 const ROLE_LABEL = { admin: 'ผู้ดูแลระบบ', editor: 'ผู้โพสต์', user: 'ผู้ใช้ทั่วไป' };
 const STATUS_LABEL = { draft: 'ร่าง', published: 'เผยแพร่', hidden: 'ซ่อน' };
 const STATUS_BADGE = {
