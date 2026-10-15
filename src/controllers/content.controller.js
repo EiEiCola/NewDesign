@@ -51,7 +51,7 @@ async function list(req, res) {
 /** Load a content row the current user may edit; throws 404/403 otherwise. */
 async function findEditable(cId, user) {
     const { recordset } = await db.query(
-        `SELECT c.*, s.name AS sub_name, s.mc_id, m.name AS main_name
+        `SELECT c.*, s.name AS sub_name, s.mc_id, m.name AS main_name, m.side
          FROM dbo.Content c
          JOIN dbo.Sub_category s  ON s.sc_id = c.sc_id
          JOIN dbo.Main_category m ON m.mc_id = s.mc_id
@@ -94,18 +94,19 @@ async function readBody(body) {
         throw badRequest('วันหมดอายุต้องอยู่หลังวันเริ่มเผยแพร่');
     }
     const sub = await db.query(
-        `SELECT s.sc_id, CASE WHEN m.side = ${SIDE.RIGHT} THEN s.link_url END AS link_url
+        `SELECT s.sc_id, s.mc_id, m.side, m.name AS main_name,
+                CASE WHEN m.side = ${SIDE.RIGHT} THEN s.link_url END AS link_url
          FROM dbo.Sub_category s JOIN dbo.Main_category m ON m.mc_id = s.mc_id
          WHERE s.sc_id = @scId`,
         { scId: d.scId }
     );
     if (!sub.recordset[0]) throw badRequest('ไม่พบหมวดหมู่รองที่เลือก');
     if (sub.recordset[0].link_url) throw badRequest('หมวดหมู่นี้เป็นลิงก์ไปเว็บอื่น ไม่สามารถโพสต์ได้');
-    return d;
+    return { ...d, category: sub.recordset[0] }; // category { mc_id, side, main_name }: decides the upload folder
 }
 
 async function create(req, res) {
-    const d = await readBody(req.body);
+    const { category, ...d } = await readBody(req.body); // category is only used when updating
     const { recordset } = await db.query(
         `INSERT INTO dbo.Content (sc_id, title, body, publish_at, expire_at, status, is_pinned, create_by)
          OUTPUT INSERTED.c_id
@@ -124,7 +125,7 @@ async function create(req, res) {
 
 async function update(req, res) {
     const current = await findEditable(v.id(req.params.id), req.user);
-    const d = await readBody(req.body);
+    const { category, ...d } = await readBody(req.body);
 
     await db.query(
         `UPDATE dbo.Content
@@ -139,13 +140,21 @@ async function update(req, res) {
         "SELECT cm_id, file_path FROM dbo.Content_media WHERE c_id = @cId AND kind = 'inline'",
         { cId: current.c_id }
     );
-    const orphaned = inline.recordset.filter((m) => !(d.body || '').includes(m.file_path));
+    // Compare decoded too: folders can have Thai names, which the browser may send URL-encoded (%E0...)
+    let decodedBody = d.body || '';
+    try { decodedBody = decodeURI(decodedBody); } catch { /* keep as is */ }
+    const orphaned = inline.recordset.filter((m) => !(d.body || '').includes(m.file_path) && !decodedBody.includes(m.file_path));
     if (orphaned.length) {
         await db.query(
             `DELETE FROM dbo.Content_media WHERE cm_id IN (${orphaned.map((_, i) => `@m${i}`).join(',')})`,
             Object.fromEntries(orphaned.map((m, i) => [`m${i}`, m.cm_id]))
         );
         await files.removeFiles(orphaned.map((m) => m.file_path));
+    }
+
+    // Moved to another main category (or the category changed side): move its files to the matching folder
+    if (files.categoryFolder(category) !== files.categoryFolder(current)) {
+        await moveMedia(current.c_id, files.categoryFolder(category));
     }
 
     const changes = [];
@@ -173,6 +182,27 @@ async function remove(req, res) {
 }
 
 /* ---------------- Media ---------------- */
+
+/** Move all files of a post into `folder` and update file_path + inline <img> paths in the body. */
+async function moveMedia(cId, folder) {
+    const { recordset } = await db.query('SELECT cm_id, file_path FROM dbo.Content_media WHERE c_id = @cId', { cId });
+    const moved = [];
+    for (const m of recordset) {
+        try {
+            const newPath = await files.moveToFolder(m.file_path, folder);
+            if (newPath === m.file_path) continue;
+            await db.query('UPDATE dbo.Content_media SET file_path = @newPath WHERE cm_id = @cmId', { newPath, cmId: m.cm_id });
+            moved.push([m.file_path, newPath]);
+        } catch (err) {
+            console.error('[file] move failed:', m.file_path, err.message); // file stays usable at its old path
+        }
+    }
+    if (!moved.length) return;
+    const row = await db.query('SELECT body FROM dbo.Content WHERE c_id = @cId', { cId });
+    let body = row.recordset[0].body || '';
+    for (const [from, to] of moved) body = body.split(from).join(to).split(encodeURI(from)).join(to);
+    await db.query('UPDATE dbo.Content SET body = @body WHERE c_id = @cId', { body, cId });
+}
 
 /**
  * Runs before multer so unauthorized users never get files written to disk.

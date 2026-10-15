@@ -109,9 +109,15 @@ CREATE TABLE dbo.Content_media (
     kind           VARCHAR(20) NOT NULL
                    CHECK (kind IN ('header', 'gallery', 'inline', 'attachment')),
     file_size      BIGINT NOT NULL,
-    file_path      VARCHAR(500) NOT NULL,                             -- e.g. /uploads/2026/10/<uuid>.jpg
+    file_path      NVARCHAR(500) NOT NULL,                            -- e.g. /uploads/left/2-HR-Board/post12-header-<random>.jpg
     sort_order     INT NOT NULL DEFAULT 0
 );
+GO
+
+/* Folder names use the (Thai) main category name, so the path must be Unicode */
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Content_media')
+           AND name = 'file_path' AND system_type_id = TYPE_ID('varchar'))
+ALTER TABLE dbo.Content_media ALTER COLUMN file_path NVARCHAR(500) NOT NULL;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Content_media_c_id')

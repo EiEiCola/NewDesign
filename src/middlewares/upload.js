@@ -1,27 +1,25 @@
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const config = require('../config');
-const { ALLOWED_FILE_EXT, ALLOWED_IMAGE_EXT } = require('../config/constants');
+const { ALLOWED_FILE_EXT, ALLOWED_IMAGE_EXT, MEDIA_KIND } = require('../config/constants');
 const { badRequest } = require('../utils/http-error');
+const files = require('../services/file.service');
 
 /**
- * Files are saved as uploads/<year>/<month>/<random-uuid><ext>.
+ * Files are saved as uploads/<side>/<mc_id>-<main category>/post<c_id>-<kind>-<random><ext>
+ *   e.g. uploads/left/2-HR-Board/post12-header-3f9a1c2b7d4e.jpg
+ * req.content (the post, set by loadEditable) decides the folder.
  * The original (possibly Thai) file name is kept only in the database.
  */
 const storage = multer.diskStorage({
     destination(req, file, cb) {
-        const now = new Date();
-        const dir = path.join(
-            config.paths.uploads,
-            String(now.getFullYear()),
-            String(now.getMonth() + 1).padStart(2, '0')
-        );
+        const dir = path.join(config.paths.uploads, files.categoryFolder(req.content));
         fs.mkdir(dir, { recursive: true }, (err) => cb(err, dir));
     },
     filename(req, file, cb) {
-        cb(null, crypto.randomUUID() + path.extname(file.originalname).toLowerCase());
+        const kind = MEDIA_KIND.includes(req.body.kind) ? req.body.kind : 'file';
+        cb(null, files.mediaFileName(req.content.c_id, kind, path.extname(file.originalname).toLowerCase()));
     },
 });
 

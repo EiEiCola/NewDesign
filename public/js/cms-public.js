@@ -108,11 +108,30 @@ const CMS = (function () {
     }
 
     let loggedIn = false;
+    let loginLinkDefault = null; // { href, html } of the Login button, restored after logout
 
     function showUser(link, user) {
         loggedIn = true;
         link.href = user.canPost ? 'admin/index.html' : '#';
         link.innerHTML = `<i class="fa-solid ${user.canPost ? 'fa-pen-to-square' : 'fa-user'} text-[10px]"></i><span>${esc(user.firstName)}${user.canPost ? ' · CMS' : ''}</span>`;
+
+        if (document.getElementById('logout-btn')) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'logout-btn';
+        btn.title = 'ออกจากระบบ';
+        btn.className = 'flex items-center gap-1.5 px-2 py-0.5 text-slate-300 hover:text-white rounded border border-transparent hover:border-white/30 transition-all text-xs font-semibold';
+        btn.innerHTML = '<i class="fa-solid fa-right-from-bracket text-[10px]"></i><span>ออกจากระบบ</span>';
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+            // Back to the Login button without leaving the page
+            loggedIn = false;
+            link.href = loginLinkDefault.href;
+            link.innerHTML = loginLinkDefault.html;
+            btn.remove();
+        });
+        link.after(btn);
     }
 
     /** Floating login form over the current page (admin/login.html stays as the no-JS fallback). */
@@ -211,6 +230,7 @@ const CMS = (function () {
     async function loadLoginState() {
         const link = document.getElementById('login-link');
         if (!link) return;
+        loginLinkDefault = { href: link.getAttribute('href'), html: link.innerHTML };
         link.addEventListener('click', (e) => {
             if (loggedIn) return;
             e.preventDefault();
