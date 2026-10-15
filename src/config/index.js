@@ -28,8 +28,9 @@ module.exports = {
         options: {
             encrypt: process.env.DB_ENCRYPT === 'true',
             trustServerCertificate: process.env.DB_TRUST_SERVER_CERT !== 'false',
-            // SYSDATETIME() stores the server's local time, so read/write dates as local time too
-            useUTC: false,
+            // All DATETIME2 columns hold UTC (SYSUTCDATETIME()); the browser converts to local time.
+            // This keeps times correct even when SQL Server runs in another timezone (e.g. Docker = UTC).
+            useUTC: true,
         },
         pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
     },

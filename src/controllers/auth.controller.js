@@ -72,7 +72,7 @@ async function login(req, res) {
     }
 
     failures.delete(key);
-    await db.query('UPDATE dbo.User_account SET last_login_at = SYSDATETIME() WHERE uc_id = @id', { id: account.uc_id });
+    await db.query('UPDATE dbo.User_account SET last_login_at = SYSUTCDATETIME() WHERE uc_id = @id', { id: account.uc_id });
     issueToken(res, account);
 
     await audit.log(req, {

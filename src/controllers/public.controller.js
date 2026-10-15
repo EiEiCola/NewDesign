@@ -8,8 +8,8 @@ const v = require('../utils/validate');
 /** A post is visible to the public only when all of these hold. */
 const VISIBLE = `
     c.status = 'published' AND c.delete_at IS NULL
-    AND (c.publish_at IS NULL OR c.publish_at <= SYSDATETIME())
-    AND (c.expire_at  IS NULL OR c.expire_at  >  SYSDATETIME())
+    AND (c.publish_at IS NULL OR c.publish_at <= SYSUTCDATETIME())
+    AND (c.expire_at  IS NULL OR c.expire_at  >  SYSUTCDATETIME())
     AND s.is_active = 1 AND m.is_active = 1`;
 
 const FROM = `

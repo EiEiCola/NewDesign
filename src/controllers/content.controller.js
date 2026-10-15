@@ -123,7 +123,7 @@ async function update(req, res) {
     await db.query(
         `UPDATE dbo.Content
          SET sc_id = @scId, title = @title, body = @body, publish_at = @publishAt, expire_at = @expireAt,
-             status = @status, is_pinned = @isPinned, update_at = SYSDATETIME()
+             status = @status, is_pinned = @isPinned, update_at = SYSUTCDATETIME()
          WHERE c_id = @cId`,
         { ...d, cId: current.c_id }
     );
@@ -156,7 +156,7 @@ async function update(req, res) {
 /** Soft delete: the row and its files stay so it can be restored from the database if needed. */
 async function remove(req, res) {
     const current = await findEditable(v.id(req.params.id), req.user);
-    await db.query('UPDATE dbo.Content SET delete_at = SYSDATETIME() WHERE c_id = @cId', { cId: current.c_id });
+    await db.query('UPDATE dbo.Content SET delete_at = SYSUTCDATETIME() WHERE c_id = @cId', { cId: current.c_id });
     await audit.log(req, {
         action: ACTION.DELETE,
         targetType: 'content',
@@ -262,7 +262,7 @@ async function deleteMedia(req, res) {
         // Also remove the <img> from the body so it does not show a broken image.
         const escaped = media.file_path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const body = content.body.replace(new RegExp(`<img[^>]*src="${escaped}"[^>]*>`, 'g'), '');
-        await db.query('UPDATE dbo.Content SET body = @body, update_at = SYSDATETIME() WHERE c_id = @cId', { body, cId: content.c_id });
+        await db.query('UPDATE dbo.Content SET body = @body, update_at = SYSUTCDATETIME() WHERE c_id = @cId', { body, cId: content.c_id });
     }
 
     await files.removeFiles([media.file_path]);

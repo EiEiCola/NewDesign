@@ -42,7 +42,7 @@ CREATE TABLE dbo.Main_category (
     side        TINYINT NOT NULL DEFAULT 2 CHECK (side IN (1, 2, 3)),  -- 1=center 2=left 3=right
     sort_order  INT NOT NULL DEFAULT 0,
     is_active   BIT NOT NULL DEFAULT 1,
-    create_at   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    create_at   DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     create_by   INT NULL REFERENCES dbo.User_account(uc_id)           -- NULL for seeded rows
 );
 GO
@@ -55,7 +55,7 @@ CREATE TABLE dbo.Sub_category (
     name        NVARCHAR(200) NOT NULL,
     sort_order  INT NOT NULL DEFAULT 0,
     is_active   BIT NOT NULL DEFAULT 1,
-    create_at   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    create_at   DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     create_by   INT NULL REFERENCES dbo.User_account(uc_id)
 );
 GO
@@ -74,9 +74,10 @@ CREATE TABLE dbo.Content (
     is_pinned   BIT NOT NULL DEFAULT 0,
     view_count  INT NOT NULL DEFAULT 0,
     create_by   INT NOT NULL REFERENCES dbo.User_account(uc_id),
-    create_at   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    create_at   DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     update_at   DATETIME2 NULL,
     delete_at   DATETIME2 NULL                                        -- soft delete
+    -- (all DATETIME2 columns store UTC)
 );
 GO
 
@@ -113,7 +114,7 @@ CREATE TABLE dbo.Audit_log (
     target_id    VARCHAR(50) NULL,
     message      NVARCHAR(500) NOT NULL,
     ip_address   VARCHAR(45) NULL,
-    create_at    DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+    create_at    DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 GO
 
