@@ -1,6 +1,27 @@
+/*
+ * Categories: one tab per side (left / center / right), drag & drop to reorder.
+ * Main categories are sorted within their side, sub categories within their main category.
+ */
 adminReady.then(() => {
-    const groupsEl = document.getElementById('groups');
+    const RIGHT = 3;
+    const SIDES = [
+        { side: 2, label: 'ซ้าย', icon: 'fa-align-left', hint: 'เมนู <b>Document</b> ใน sidebar ซ้ายของหน้าเว็บ' },
+        { side: 1, label: 'กลาง', icon: 'fa-newspaper', hint: 'โพสต์ในหมวดนี้ขึ้น<b>ข่าวด้านบนหน้าแรก</b> (carousel)' },
+        { side: 3, label: 'ขวา', icon: 'fa-server', hint: 'เมนู <b>System Online</b> ใน sidebar ขวา · หมวดหมู่หลักหรือรองเป็น<b>ลิงก์ไปเว็บอื่น</b>ได้' },
+    ];
+
+    const listEl = document.getElementById('main-list');
+    const tabsEl = document.getElementById('side-tabs');
     let categories = [];
+    let sortables = [];
+
+    // Per-viewer UI state (tab + collapsed cards); storage may be unavailable, so never rely on it
+    const store = {
+        get(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } },
+        set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ } },
+    };
+    let activeSide = SIDES.some((x) => x.side === store.get('categories.tab')) ? store.get('categories.tab') : 2;
+    const collapsed = new Set(store.get('categories.collapsed', []));
 
     async function load() {
         try {
@@ -11,56 +32,128 @@ adminReady.then(() => {
         }
     }
 
-    const activeBadge = (on) => on
-        ? '<span class="text-[10px] text-emerald-600">ใช้งาน</span>'
-        : '<span class="text-[10px] text-red-500">ปิดใช้งาน</span>';
-
-    function render() {
-        groupsEl.innerHTML = [2, 1, 3].map((side) => {
-            const mains = categories.filter((m) => m.side === side);
-            return `
-                <section>
-                    <h2 class="text-[12px] font-bold uppercase tracking-widest text-slate-400 mb-2">ตำแหน่ง: ${SIDE_LABEL[side]}</h2>
-                    ${mains.length ? '' : '<p class="text-[13px] text-slate-400 bg-white border border-dashed border-slate-300 rounded-lg p-4">ยังไม่มีหมวดหมู่ในตำแหน่งนี้</p>'}
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">${mains.map(mainCard).join('')}</div>
-                </section>`;
-        }).join('');
+    function setTab(side) {
+        activeSide = side;
+        store.set('categories.tab', side);
+        render();
     }
 
-    const RIGHT = 3;
+    const activeBadge = (on) => (on ? '' : '<span class="text-[10px] text-red-500 bg-red-50 border border-red-200 rounded px-1.5">ปิดใช้งาน</span>');
     const linkLine = (url) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-blue-600 hover:underline truncate block">${esc(url)}</a>`;
+    const handle = (cls, title) => `<span class="${cls} cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 px-1 touch-none" title="${title}"><i class="fa-solid fa-grip-vertical"></i></span>`;
+
+    function render() {
+        tabsEl.innerHTML = SIDES.map((x) => {
+            const n = categories.filter((m) => m.side === x.side).length;
+            const on = x.side === activeSide;
+            return `
+                <button type="button" role="tab" aria-selected="${on}" data-tab="${x.side}"
+                    class="flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold border-b-2 -mb-px transition-colors ${on ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800'}">
+                    <i class="fa-solid ${x.icon} text-xs"></i>${x.label}
+                    <span class="text-[11px] rounded-full px-1.5 ${on ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'}">${n}</span>
+                </button>`;
+        }).join('');
+        document.getElementById('side-hint').innerHTML = SIDES.find((x) => x.side === activeSide).hint;
+
+        const mains = categories.filter((m) => m.side === activeSide).sort((a, b) => a.sort_order - b.sort_order || a.mc_id - b.mc_id);
+        listEl.innerHTML = mains.length
+            ? mains.map(mainCard).join('')
+            : '<p class="text-[13px] text-slate-400 border border-dashed border-slate-300 rounded-lg p-6 text-center">ยังไม่มีหมวดหมู่ในตำแหน่งนี้</p>';
+        initSortable();
+    }
 
     function mainCard(m) {
         const isLink = m.side === RIGHT && m.link_url;
+        const open = !collapsed.has(m.mc_id);
+        const subs = [...m.subs].sort((a, b) => a.sort_order - b.sort_order || a.sc_id - b.sc_id);
         return `
-            <div class="bg-white border border-slate-200 rounded-lg ${m.is_active ? '' : 'opacity-60'}">
-                <div class="flex items-center gap-2 px-4 py-2.5 ${isLink ? '' : 'border-b border-slate-100'}">
-                    <i class="fa-solid ${isLink ? 'fa-arrow-up-right-from-square text-blue-500' : 'fa-folder text-yellow-500'}"></i>
-                    <span class="font-semibold text-slate-800 text-[14px] flex-1 min-w-0 truncate">${esc(m.name)}</span>
-                    <span class="text-[11px] text-slate-400">ลำดับ ${m.sort_order}</span>
+            <div class="border border-slate-200 rounded-lg bg-white ${m.is_active ? '' : 'opacity-60'}" data-mc="${m.mc_id}">
+                <div class="flex items-center gap-2 pl-1 pr-2 py-2 bg-slate-50 rounded-t-lg ${open && !isLink ? 'border-b border-slate-100' : 'rounded-b-lg'}">
+                    ${handle('drag-main', 'ลากเพื่อเรียงหมวดหมู่หลัก')}
+                    ${isLink ? '<span class="w-5"></span>' : `
+                    <button type="button" class="w-5 text-slate-400 hover:text-slate-700" data-toggle="${m.mc_id}" title="${open ? 'ย่อ' : 'ขยาย'}">
+                        <i class="fa-solid fa-chevron-${open ? 'down' : 'right'} text-[10px]"></i>
+                    </button>`}
+                    <i class="fa-solid ${isLink ? 'fa-arrow-up-right-from-square text-blue-500' : open ? 'fa-folder-open text-yellow-500' : 'fa-folder text-yellow-500'}"></i>
+                    <span class="flex-1 min-w-0">
+                        <span class="font-semibold text-slate-800 text-[14px] truncate block">${esc(m.name)}</span>
+                        ${isLink ? linkLine(m.link_url) : ''}
+                    </span>
+                    ${isLink ? '' : `<span class="text-[11px] text-slate-400 whitespace-nowrap">${m.subs.length} หมวดรอง</span>`}
                     ${activeBadge(m.is_active)}
                     <button type="button" class="btn btn-ghost !px-2" title="แก้ไข" data-edit-main="${m.mc_id}"><i class="fa-solid fa-pen"></i></button>
                     <button type="button" class="btn btn-danger !px-2" title="ลบ" data-del-main="${m.mc_id}"><i class="fa-solid fa-trash"></i></button>
                 </div>
-                ${isLink ? `<div class="pl-10 pr-4 pb-2.5 -mt-1">${linkLine(m.link_url)}</div>` : `
-                <ul class="divide-y divide-slate-50">
-                    ${m.subs.map((s) => {
+                ${isLink || !open ? '' : `
+                <ul class="divide-y divide-slate-50" data-sub-list="${m.mc_id}">
+                    ${subs.map((s) => {
                         const subLink = m.side === RIGHT && s.link_url;
                         return `
-                        <li class="flex items-center gap-2 pl-10 pr-4 py-1.5 text-[13px] ${s.is_active ? '' : 'opacity-50'}">
+                        <li class="flex items-center gap-2 pl-8 pr-3 py-1.5 text-[13px] bg-white ${s.is_active ? '' : 'opacity-50'}" data-sc="${s.sc_id}">
+                            ${handle('drag-sub', 'ลากเพื่อเรียงหมวดหมู่รอง')}
                             <i class="${subLink ? 'fa-solid fa-link text-blue-400 text-[10px]' : 'fa-regular fa-file-lines text-slate-400 text-xs'}"></i>
                             <span class="flex-1 min-w-0"><span class="truncate block">${esc(s.name)}</span>${subLink ? linkLine(s.link_url) : ''}</span>
-                            <span class="text-[11px] text-slate-400">${subLink ? 'ลิงก์' : `${s.content_count} โพสต์`} · ลำดับ ${s.sort_order}</span>
+                            <span class="text-[11px] text-slate-400 whitespace-nowrap">${subLink ? 'ลิงก์' : `${s.content_count} โพสต์`}</span>
                             ${activeBadge(s.is_active)}
                             <button type="button" class="text-slate-400 hover:text-primary w-6" title="แก้ไข" data-edit-sub="${s.sc_id}"><i class="fa-solid fa-pen text-[11px]"></i></button>
                             <button type="button" class="text-slate-400 hover:text-red-600 w-6" title="ลบ" data-del-sub="${s.sc_id}"><i class="fa-solid fa-trash text-[11px]"></i></button>
                         </li>`;
                     }).join('')}
-                    <li class="pl-10 pr-4 py-2">
-                        <button type="button" class="text-[12px] text-primary hover:underline" data-add-sub="${m.mc_id}"><i class="fa-solid fa-plus text-[10px]"></i> เพิ่มหมวดหมู่รอง</button>
-                    </li>
-                </ul>`}
+                </ul>
+                <div class="pl-14 pr-3 py-2 border-t border-slate-50">
+                    <button type="button" class="text-[12px] text-primary hover:underline" data-add-sub="${m.mc_id}"><i class="fa-solid fa-plus text-[10px]"></i> เพิ่มหมวดหมู่รอง</button>
+                </div>`}
             </div>`;
+    }
+
+    /* ---------------- Drag & drop ---------------- */
+
+    function initSortable() {
+        sortables.forEach((x) => x.destroy());
+        sortables = [];
+        if (typeof Sortable === 'undefined') return; // CDN blocked: list still works, just no dragging
+        const options = { animation: 150, ghostClass: 'opacity-40' };
+
+        sortables.push(Sortable.create(listEl, {
+            ...options,
+            handle: '.drag-main',
+            draggable: '[data-mc]',
+            onEnd: (e) => {
+                if (e.oldIndex === e.newIndex) return;
+                const order = [...listEl.querySelectorAll(':scope > [data-mc]')].map((el) => Number(el.dataset.mc));
+                saveOrder('/api/categories/main/order', { side: activeSide, order }, () => {
+                    order.forEach((id, i) => { categories.find((m) => m.mc_id === id).sort_order = i + 1; });
+                });
+            },
+        }));
+
+        listEl.querySelectorAll('[data-sub-list]').forEach((ul) => {
+            sortables.push(Sortable.create(ul, {
+                ...options,
+                handle: '.drag-sub',
+                draggable: '[data-sc]',
+                onEnd: (e) => {
+                    if (e.oldIndex === e.newIndex) return;
+                    const mcId = Number(ul.dataset.subList);
+                    const order = [...ul.querySelectorAll(':scope > [data-sc]')].map((el) => Number(el.dataset.sc));
+                    saveOrder('/api/categories/sub/order', { mc_id: mcId, order }, () => {
+                        const main = categories.find((m) => m.mc_id === mcId);
+                        order.forEach((id, i) => { main.subs.find((s) => s.sc_id === id).sort_order = i + 1; });
+                    });
+                },
+            }));
+        });
+    }
+
+    async function saveOrder(url, body, applyLocally) {
+        try {
+            await API.put(url, body);
+            applyLocally();
+            toast('บันทึกลำดับแล้ว');
+        } catch (err) {
+            toast(err.message, 'error');
+            load(); // put the list back the way the server has it
+        }
     }
 
     function findSub(scId) {
@@ -93,15 +186,12 @@ adminReady.then(() => {
 
     function mainModal(m) {
         const isNew = !m;
-        m = m || { name: '', side: 2, sort_order: nextOrder(categories), is_active: true, link_url: null };
+        m = m || { name: '', side: activeSide, is_active: true, link_url: null };
         const { el, close } = openModal(isNew ? 'เพิ่มหมวดหมู่' : 'แก้ไขหมวดหมู่หลัก', `
             <form class="space-y-3" novalidate>
                 <div><label class="admin-label">ชื่อหมวดหมู่หลัก *</label><input name="name" class="admin-input" maxlength="200" value="${esc(m.name)}"></div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="admin-label">ตำแหน่ง</label>
-                        <select name="side" class="admin-input">${[2, 3, 1].map((s) => `<option value="${s}" ${s === m.side ? 'selected' : ''}>${SIDE_LABEL[s]}</option>`).join('')}</select>
-                    </div>
-                    <div><label class="admin-label">ลำดับ</label><input name="sort_order" type="number" class="admin-input" value="${m.sort_order}"></div>
+                <div><label class="admin-label">ตำแหน่ง</label>
+                    <select name="side" class="admin-input">${SIDES.map((x) => `<option value="${x.side}" ${x.side === m.side ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
                 </div>
                 <label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_active" ${m.is_active ? 'checked' : ''}> เปิดใช้งาน</label>
                 ${linkChooserHtml(m.link_url, 'มีหมวดหมู่รอง')}
@@ -169,10 +259,11 @@ adminReady.then(() => {
             const data = {
                 name: form.name.value,
                 side: Number(form.side.value),
-                sort_order: Number(form.sort_order.value) || 0,
                 is_active: form.is_active.checked,
                 link_url: readLinkChooser(form),
             };
+            // Order comes from drag & drop: keep it, or go to the end when added / moved to another side
+            data.sort_order = !isNew && data.side === m.side ? m.sort_order : nextOrder(categories.filter((x) => x.side === data.side));
             if (!linkBox.hidden && form.kind.value === 'link' && !data.link_url) return toast('กรุณากรอกลิงก์', 'error');
             if (subsEl && !data.link_url) {
                 data.subs = [...subsEl.children]
@@ -182,21 +273,21 @@ adminReady.then(() => {
                     }))
                     .filter((x) => x.name);
             }
+            if (data.side !== activeSide) setTab(data.side); // show where it went
             save(form, close, () => (isNew ? API.post('/api/categories/main', data) : API.put(`/api/categories/main/${m.mc_id}`, data)));
         });
     }
 
     function subModal(s, mcId) {
         const isNew = !s;
-        const parent = categories.find((m) => m.mc_id === (s ? s.mc_id : mcId));
-        s = s || { name: '', mc_id: mcId, sort_order: nextOrder(parent ? parent.subs : []), is_active: true, link_url: null };
+        s = s || { name: '', mc_id: mcId, is_active: true, link_url: null };
         const { el, close } = openModal(isNew ? 'เพิ่มหมวดหมู่รอง' : 'แก้ไขหมวดหมู่รอง', `
             <form class="space-y-3" novalidate>
                 <div><label class="admin-label">อยู่ในหมวดหมู่หลัก</label>
-                    <select name="mc_id" class="admin-input">${categories.map((m) => `<option value="${m.mc_id}" ${m.mc_id === s.mc_id ? 'selected' : ''}>${esc(m.name)} (${SIDE_LABEL[m.side]})</option>`).join('')}</select>
+                    <select name="mc_id" class="admin-input">${SIDES.map((x) => `
+                        <optgroup label="${x.label}">${categories.filter((m) => m.side === x.side && !(m.side === RIGHT && m.link_url)).map((m) => `<option value="${m.mc_id}" ${m.mc_id === s.mc_id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('')}</select>
                 </div>
                 <div><label class="admin-label">ชื่อหมวดหมู่รอง *</label><input name="name" class="admin-input" maxlength="200" value="${esc(s.name)}"></div>
-                <div><label class="admin-label">ลำดับ</label><input name="sort_order" type="number" class="admin-input" value="${s.sort_order}"></div>
                 <label class="flex items-center gap-2 text-[13px]"><input type="checkbox" name="is_active" ${s.is_active ? 'checked' : ''}> เปิดใช้งาน</label>
                 ${linkChooserHtml(s.link_url, 'รายการโพสต์ (ปกติ)')}
                 <div class="flex justify-end gap-2 pt-2">
@@ -220,10 +311,11 @@ adminReady.then(() => {
             const data = {
                 mc_id: Number(form.mc_id.value),
                 name: form.name.value,
-                sort_order: Number(form.sort_order.value) || 0,
                 is_active: form.is_active.checked,
                 link_url: readLinkChooser(form),
             };
+            const target = categories.find((m) => m.mc_id === data.mc_id);
+            data.sort_order = !isNew && data.mc_id === s.mc_id ? s.sort_order : nextOrder(target ? target.subs : []);
             if (!linkBox.hidden && form.kind.value === 'link' && !data.link_url) return toast('กรุณากรอกลิงก์', 'error');
             save(form, close, () => (isNew ? API.post('/api/categories/sub', data) : API.put(`/api/categories/sub/${s.sc_id}`, data)));
         });
@@ -257,11 +349,27 @@ adminReady.then(() => {
         }
     }
 
+    function setCollapsed(ids, on) {
+        ids.forEach((id) => (on ? collapsed.add(id) : collapsed.delete(id)));
+        store.set('categories.collapsed', [...collapsed]);
+        render();
+    }
+
     document.getElementById('btn-add-main').addEventListener('click', () => mainModal());
-    groupsEl.addEventListener('click', (e) => {
+    const idsOnTab = () => categories.filter((m) => m.side === activeSide).map((m) => m.mc_id);
+    document.getElementById('btn-collapse-all').addEventListener('click', () => setCollapsed(idsOnTab(), true));
+    document.getElementById('btn-expand-all').addEventListener('click', () => setCollapsed(idsOnTab(), false));
+
+    tabsEl.addEventListener('click', (e) => {
+        const tab = e.target.closest('[data-tab]');
+        if (tab) setTab(Number(tab.dataset.tab));
+    });
+
+    listEl.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
         const d = btn.dataset;
+        if (d.toggle) setCollapsed([Number(d.toggle)], !collapsed.has(Number(d.toggle)));
         if (d.editMain) mainModal(categories.find((m) => m.mc_id === Number(d.editMain)));
         if (d.delMain) {
             const m = categories.find((x) => x.mc_id === Number(d.delMain));
@@ -275,5 +383,6 @@ adminReady.then(() => {
         }
     });
 
+    render(); // tabs show right away; the list fills in after load
     load();
 });

@@ -226,4 +226,59 @@ async function deleteSub(req, res) {
     res.json({ ok: true });
 }
 
-module.exports = { list, createMain, updateMain, deleteMain, createSub, updateSub, deleteSub };
+/* ---------------- Drag & drop order ---------------- */
+
+/** Read `order`: the ids in their new order (all must be distinct). */
+function readOrder(body) {
+    if (!Array.isArray(body.order) || !body.order.length) throw badRequest('ไม่มีลำดับที่จะบันทึก');
+    const ids = body.order.map((x) => v.id(x, 'id'));
+    if (new Set(ids).size !== ids.length) throw badRequest('ลำดับซ้ำกัน');
+    return ids;
+}
+
+/** PUT /main/order { side, order: [mc_id, ...] } → sort_order 1..n within that side. */
+async function reorderMain(req, res) {
+    const side = v.int(req.body.side, 0);
+    if (!SIDE_LABEL[side]) throw badRequest('ตำแหน่งไม่ถูกต้อง');
+    const ids = readOrder(req.body);
+    await db.transaction(async (tx) => {
+        for (const [i, mcId] of ids.entries()) {
+            await db.query(
+                'UPDATE dbo.Main_category SET sort_order = @n WHERE mc_id = @mcId AND side = @side',
+                { n: i + 1, mcId, side },
+                tx
+            );
+        }
+    });
+    await audit.log(req, {
+        action: ACTION.UPDATE,
+        targetType: 'main_category',
+        message: `จัดลำดับหมวดหมู่หลัก ตำแหน่ง${SIDE_LABEL[side]} (${ids.length} รายการ)`,
+    });
+    res.json({ ok: true });
+}
+
+/** PUT /sub/order { mc_id, order: [sc_id, ...] } → sort_order 1..n within that main category. */
+async function reorderSub(req, res) {
+    const mcId = v.id(req.body.mc_id, 'หมวดหมู่หลัก');
+    const mainName = await assertMainExists({ mcId });
+    const ids = readOrder(req.body);
+    await db.transaction(async (tx) => {
+        for (const [i, scId] of ids.entries()) {
+            await db.query(
+                'UPDATE dbo.Sub_category SET sort_order = @n WHERE sc_id = @scId AND mc_id = @mcId',
+                { n: i + 1, scId, mcId },
+                tx
+            );
+        }
+    });
+    await audit.log(req, {
+        action: ACTION.UPDATE,
+        targetType: 'main_category',
+        targetId: mcId,
+        message: `จัดลำดับหมวดหมู่รองใน ${mainName} (${ids.length} รายการ)`,
+    });
+    res.json({ ok: true });
+}
+
+module.exports = { list, createMain, updateMain, deleteMain, createSub, updateSub, deleteSub, reorderMain, reorderSub };

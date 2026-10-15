@@ -19,19 +19,32 @@
         <aside id="admin-nav" class="hidden md:flex flex-col w-full md:w-60 bg-slate-900 py-4 px-2 md:sticky md:top-0 md:h-screen flex-shrink-0"></aside>
 
         <main id="page" class="flex-1 min-w-0 p-4 md:p-6" hidden>
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-                <h1 class="text-xl font-bold text-slate-800">หมวดหมู่</h1>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">หมวดหมู่</h1>
+                    <p class="text-[12px] text-slate-500 mt-0.5">
+                        <i class="fa-solid fa-grip-vertical text-slate-400"></i> จับลากเพื่อเรียงลำดับ (บันทึกอัตโนมัติ) ·
+                        หมวดที่มีโพสต์ลบไม่ได้ ให้ปิดใช้งานแทน
+                    </p>
+                </div>
                 <button type="button" id="btn-add-main" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> เพิ่มหมวดหมู่</button>
             </div>
-            <p class="text-[12px] text-slate-500 mb-4">
-                ตำแหน่ง <b>ซ้าย/ขวา</b> = แสดงเป็นเมนูใน sidebar · <b>กลาง</b> = โพสต์ในหมวดนี้ขึ้นข่าวด้านบนหน้าแรก ·
-                ลำดับเลขน้อยแสดงก่อน · หมวดที่มีโพสต์ลบไม่ได้ ให้ปิดใช้งานแทน
-            </p>
 
-            <div id="groups" class="space-y-6"></div>
+            <div class="bg-white border border-slate-200 rounded-lg">
+                <div class="flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 px-2">
+                    <div id="side-tabs" class="flex" role="tablist"></div>
+                    <div class="flex gap-1 py-2 pr-2">
+                        <button type="button" id="btn-collapse-all" class="btn btn-ghost !px-2 !py-1" title="ย่อทั้งหมด"><i class="fa-solid fa-compress"></i> ย่อทั้งหมด</button>
+                        <button type="button" id="btn-expand-all" class="btn btn-ghost !px-2 !py-1" title="ขยายทั้งหมด"><i class="fa-solid fa-expand"></i> ขยายทั้งหมด</button>
+                    </div>
+                </div>
+                <p id="side-hint" class="px-4 pt-3 text-[12px] text-slate-500"></p>
+                <div id="main-list" class="p-4 space-y-2"></div>
+            </div>
         </main>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
     <script src="../js/admin/api.js"></script>
     <script src="../js/admin/layout.js"></script>
     <script src="../js/admin/categories.js"></script>

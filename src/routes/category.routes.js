@@ -10,6 +10,10 @@ router.use(authenticate);
 // Editors need the list to pick a category when posting; only admins can change it.
 router.get('/', requireRole(...CAN_POST), ctrl.list);
 
+// Drag & drop order (before /:id so "order" is not read as an id)
+router.put('/main/order', requireRole(ROLE.ADMIN), ctrl.reorderMain);
+router.put('/sub/order', requireRole(ROLE.ADMIN), ctrl.reorderSub);
+
 router.post('/main', requireRole(ROLE.ADMIN), ctrl.createMain);
 router.put('/main/:id', requireRole(ROLE.ADMIN), ctrl.updateMain);
 router.delete('/main/:id', requireRole(ROLE.ADMIN), ctrl.deleteMain);
